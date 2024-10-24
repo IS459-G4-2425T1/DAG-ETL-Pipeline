@@ -31,9 +31,9 @@ jobs:
           role-session-name: github-action-role
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Bootstrap
-        run: |
-          . _CI/bootstrap.sh
+      # - name: Bootstrap
+      #   run: |
+      #     . _CI/bootstrap.sh
 
       - name: Deploy
         run: |
