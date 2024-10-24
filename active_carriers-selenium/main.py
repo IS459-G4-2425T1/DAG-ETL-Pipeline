@@ -1,16 +1,13 @@
-import logging
-import json
-
-from tempfile import mkdtemp
+import os
+import time
 from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options as ChromeOptions
+from tempfile import mkdtemp
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
-
-def initialise_driver():
+def lambda_handler(event, context):
     chrome_options = ChromeOptions()
     chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--no-sandbox")
@@ -36,25 +33,23 @@ def initialise_driver():
         service=service,
         options=chrome_options
     )
-
-    return driver
-
-
-def lambda_handler(event, context):
-    driver = initialise_driver()
-    driver.get("https://www.transtats.bts.gov/OT_Delay/OT_DelayCause1.asp")
-    logger.info(f"Page title: ${driver.title}")
-
-    body = {
-        "title": driver.title
+    # Open a webpage
+    driver.get('https://www.google.com')
+    # Find the search box
+    search_box = driver.find_element(By.NAME, 'q')
+    # Enter a search query
+    search_box.send_keys('OpenAI')
+    # Submit the search query
+    search_box.send_keys(Keys.RETURN)
+    # Wait for the results to load
+    time.sleep(2)
+    # Get the results
+    results = driver.find_elements(By.CSS_SELECTOR, 'div.g')
+    # Print the titles of the results
+    titles = [result.find_element(By.TAG_NAME, 'h3').text for result in results]
+    # Close the WebDriver
+    driver.quit()
+    return {
+        'statusCode': 200,
+        'body': titles
     }
-
-    response = {
-        "statusCode": 200,
-        "headers": {
-            "Content-Type": "application/json"
-        },
-        "body": json.dumps(body)
-    }
-
-    return response
