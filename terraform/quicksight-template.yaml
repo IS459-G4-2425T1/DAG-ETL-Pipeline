@@ -1,0 +1,101 @@
+# quicksight-template.yaml
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: QuickSight Templates for All Flows
+
+Parameters:
+  QuickSightUserName:
+    Type: String
+    Description: QuickSight user name
+
+  Flow1DataSetArn:
+    Type: String
+    Description: "ARN of the Flow1 QuickSight DataSet"
+
+  Flow2DataSetArn:
+    Type: String
+    Description: "ARN of the Flow2 QuickSight DataSet"
+
+  Flow3DataSetArn:
+    Type: String
+    Description: "ARN of the Flow3 QuickSight DataSet"
+
+Resources:
+  # Flow 1 QuickSight Template
+  QuickSightTemplateFlow1:
+    Type: AWS::QuickSight::Template
+    Properties:
+      AwsAccountId: !Ref AWS::AccountId
+      TemplateId: "Flow1Template"
+      Name: "Flow1Template"
+      SourceEntity:
+        SourceTemplate:
+          Arn: "arn:aws:quicksight:ap-southeast-1:123456789012:template/YourSourceTemplate" # Replace with your source template ARN
+          DataSetReferences:
+            - DataSetPlaceholder: "Flow1DataSetPlaceholder"
+              DataSetArn: !Ref Flow1DataSetArn
+      Permissions:
+        - Principal: !Sub "arn:aws:iam::${AWS::AccountId}:user/${QuickSightUserName}"
+          Actions:
+            - "quicksight:DescribeTemplate"
+            - "quicksight:DescribeTemplatePermissions"
+            - "quicksight:UpdateTemplate"
+            - "quicksight:DeleteTemplate"
+            - "quicksight:UpdateTemplatePermissions"
+
+  # Flow 2 QuickSight Template
+  QuickSightTemplateFlow2:
+    Type: AWS::QuickSight::Template
+    Properties:
+      AwsAccountId: !Ref AWS::AccountId
+      TemplateId: "Flow2Template"
+      Name: "Flow2Template"
+      SourceEntity:
+        SourceTemplate:
+          Arn: "arn:aws:quicksight:ap-southeast-1:123456789012:template/YourSourceTemplate" # Replace with your source template ARN
+          DataSetReferences:
+            - DataSetPlaceholder: "Flow2DataSetPlaceholder"
+              DataSetArn: !Ref Flow2DataSetArn
+      Permissions:
+        - Principal: !Sub "arn:aws:iam::${AWS::AccountId}:user/${QuickSightUserName}"
+          Actions:
+            - "quicksight:DescribeTemplate"
+            - "quicksight:DescribeTemplatePermissions"
+            - "quicksight:UpdateTemplate"
+            - "quicksight:DeleteTemplate"
+            - "quicksight:UpdateTemplatePermissions"
+
+  # Flow 3 QuickSight Template
+  QuickSightTemplateFlow3:
+    Type: AWS::QuickSight::Template
+    Properties:
+      AwsAccountId: !Ref AWS::AccountId
+      TemplateId: "Flow3Template"
+      Name: "Flow3Template"
+      SourceEntity:
+        SourceTemplate:
+          Arn: "arn:aws:quicksight:ap-southeast-1:123456789012:template/YourSourceTemplate" # Replace with your source template ARN
+          DataSetReferences:
+            - DataSetPlaceholder: "Flow3DataSetPlaceholder"
+              DataSetArn: !Ref Flow3DataSetArn
+      Permissions:
+        - Principal: !Sub "arn:aws:iam::${AWS::AccountId}:user/${QuickSightUserName}"
+          Actions:
+            - "quicksight:DescribeTemplate"
+            - "quicksight:DescribeTemplatePermissions"
+            - "quicksight:UpdateTemplate"
+            - "quicksight:DeleteTemplate"
+            - "quicksight:UpdateTemplatePermissions"
+
+Outputs:
+  Flow1TemplateArn:
+    Description: "ARN of Flow1 QuickSight Template"
+    Value: !GetAtt QuickSightTemplateFlow1.Arn
+
+  Flow2TemplateArn:
+    Description: "ARN of Flow2 QuickSight Template"
+    Value: !GetAtt QuickSightTemplateFlow2.Arn
+
+  Flow3TemplateArn:
+    Description: "ARN of Flow3 QuickSight Template"
+    Value: !GetAtt QuickSightTemplateFlow3.Arn
