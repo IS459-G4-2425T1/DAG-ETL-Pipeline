@@ -16,8 +16,8 @@ variable "raw_data_bucket_name" {
   type        = string
 }
 
-variable "glue_job_name" {
-  description = "Name of the Glue ETL job"
+variable "glue_job_historic_name" {
+  description = "Name of the Glue Historic ETL job"
   type        = string
 }
 
@@ -26,13 +26,28 @@ variable "glue_role_arn" {
   type        = string
 }
 
-variable "glue_script_location" {
-  description = "S3 path to the Glue ETL script"
+variable "glue_airline_historic_etl_script" {
+  description = "S3 path to the Historic Airline Glue ETL script"
+  type        = string
+}
+
+variable "glue_job_engineering_name" {
+  description = "Name of the Glue Engineering job"
+  type        = string
+}
+
+variable "glue_engineering_job_script" {
+  description = "S3 path to the Engineering Job script"
   type        = string
 }
 
 variable "glue_temp_dir" {
   description = "Temporary directory for Glue job"
+  type        = string
+}
+
+variable "glue_spark_logs_dir" {
+  description = "Directory for Glue Spark Logs"
   type        = string
 }
 

@@ -1,4 +1,43 @@
-// modules/flow3/main.tf
+// Lambda Function to Retrieve External API Data
+resource "aws_lambda_function" "external_api_retrieval" {
+  filename         = var.lambda_function_zip
+  function_name    = var.lambda_function_name
+  role             = var.lambda_role_arn
+  handler          = var.lambda_handler
+  runtime          = var.lambda_runtime
+  timeout          = 30
+  memory_size      = 128
+  publish          = true
+
+  # source_code_hash = filebase64sha256(var.lambda_function_zip)
+  # To add after source code is created
+}
+
+
+// EventBridge Rule to Schedule Lambda
+resource "aws_cloudwatch_event_rule" "daily_trigger" {
+  name                = "DailyTrigger"
+  description         = "triggers at 8am"
+  event_bus_name      = "default"
+  state               = "DISABLED"
+
+  schedule_expression = "cron(0 8 * * ? *)"
+}
+
+resource "aws_cloudwatch_event_target" "daily_lambda_target" {
+  rule      = aws_cloudwatch_event_rule.daily_trigger.name
+  target_id = "LambdaFunctionTarget"
+  arn       = aws_lambda_function.external_api_retrieval.arn
+}
+
+resource "aws_lambda_permission" "allow_eventbridge_daily" {
+  statement_id  = "AllowExecutionFromEventBridge_DailyTrigger"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.external_api_retrieval.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.daily_trigger.arn
+}
+
 
 // S3 Bucket for User Input Data
 resource "aws_s3_bucket" "user_input_data" {

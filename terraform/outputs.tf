@@ -1,5 +1,3 @@
-// root/outputs.tf
-
 output "shared_bucket_arn" {
   description = "ARN of the shared S3 bucket"
   value       = module.shared_resources.shared_bucket_arn

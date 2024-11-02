@@ -30,7 +30,7 @@ Resources:
       Name: "Flow1Template"
       SourceEntity:
         SourceTemplate:
-          Arn: "arn:aws:quicksight:ap-southeast-1:123456789012:template/YourSourceTemplate" # Replace with your source template ARN
+          Arn: "arn:aws:quicksight:us-east-1:123456789012:template/YourSourceTemplate" # Replace with your source template ARN
           DataSetReferences:
             - DataSetPlaceholder: "Flow1DataSetPlaceholder"
               DataSetArn: !Ref Flow1DataSetArn
@@ -52,7 +52,7 @@ Resources:
       Name: "Flow2Template"
       SourceEntity:
         SourceTemplate:
-          Arn: "arn:aws:quicksight:ap-southeast-1:123456789012:template/YourSourceTemplate" # Replace with your source template ARN
+          Arn: "arn:aws:quicksight:us-east-1:123456789012:template/YourSourceTemplate" # Replace with your source template ARN
           DataSetReferences:
             - DataSetPlaceholder: "Flow2DataSetPlaceholder"
               DataSetArn: !Ref Flow2DataSetArn
@@ -74,7 +74,7 @@ Resources:
       Name: "Flow3Template"
       SourceEntity:
         SourceTemplate:
-          Arn: "arn:aws:quicksight:ap-southeast-1:123456789012:template/YourSourceTemplate" # Replace with your source template ARN
+          Arn: "arn:aws:quicksight:us-east-1:123456789012:template/YourSourceTemplate" # Replace with your source template ARN
           DataSetReferences:
             - DataSetPlaceholder: "Flow3DataSetPlaceholder"
               DataSetArn: !Ref Flow3DataSetArn

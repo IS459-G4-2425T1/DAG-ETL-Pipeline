@@ -3,7 +3,7 @@
 variable "aws_region" {
   description = "AWS region to deploy resources in"
   type        = string
-  default     = "ap-southeast-1"
+  default     = "us-east-1"
 }
 
 variable "shared_bucket_name" {
@@ -42,18 +42,33 @@ variable "flow1_raw_data_bucket_name" {
   type        = string
 }
 
-variable "flow1_glue_job_name" {
-  description = "Name of the Glue job for Flow 1"
+variable "flow1_glue_job_historic_name" {
+  description = "Name of the Glue Historic job for Flow 1"
   type        = string
 }
 
-variable "flow1_glue_script_location" {
+variable "flow1_glue_job_engineering_name" {
+  description = "Name of the Glue Engineering job for Flow 1"
+  type        = string
+}
+
+variable "flow1_glue_airline_historic_etl_script" {
   description = "S3 path to the Glue ETL script for Flow 1"
+  type        = string
+}
+
+variable "flow1_glue_engineering_job_script" {
+  description = "S3 path to the Engineering Job script"
   type        = string
 }
 
 variable "flow1_glue_temp_dir" {
   description = "Temporary directory for Glue job in Flow 1"
+  type        = string
+}
+
+variable "flow1_glue_spark_logs_dir" {
+  description = "Directory for Glue SPark Logs in Flow 1"
   type        = string
 }
 

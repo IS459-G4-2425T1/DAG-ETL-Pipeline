@@ -140,9 +140,12 @@ module "flow1" {
   lambda_role_arn         = module.shared_resources.lambda_role_arn
 
   raw_data_bucket_name       = var.flow1_raw_data_bucket_name
-  glue_job_name              = var.flow1_glue_job_name
+  glue_job_historic_name              = var.flow1_glue_job_historic_name
+  glue_job_engineering_name = var.flow1_glue_job_engineering_name
   glue_role_arn              = aws_iam_role.flow1_glue_role.arn
-  glue_script_location       = var.flow1_glue_script_location
+  glue_airline_historic_etl_script       = var.flow1_glue_airline_historic_etl_script
+  glue_spark_logs_dir = var.flow1_glue_spark_logs_dir
+  glue_engineering_job_script = var.flow1_glue_engineering_job_script
   glue_temp_dir              = var.flow1_glue_temp_dir
   sagemaker_model_name       = var.flow1_sagemaker_model_name
   sagemaker_role_arn         = aws_iam_role.flow1_sagemaker_role.arn

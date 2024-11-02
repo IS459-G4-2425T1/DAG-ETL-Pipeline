@@ -1,5 +1,3 @@
-// modules/flow3/outputs.tf
-
 output "user_input_data_bucket_arn" {
   description = "ARN of the user input data S3 bucket"
   value       = aws_s3_bucket.user_input_data.arn

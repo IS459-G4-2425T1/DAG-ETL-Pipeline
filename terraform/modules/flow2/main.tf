@@ -1,5 +1,3 @@
-// modules/flow2/main.tf
-
 // S3 Bucket for Raw API Data
 resource "aws_s3_bucket" "external_api_raw_data" {
   bucket = var.raw_api_data_bucket_name
@@ -12,8 +10,8 @@ resource "aws_s3_bucket_versioning" "external_api_raw_data" {
   }
 }
 
-// Lambda Function to Retrieve External API Data
-resource "aws_lambda_function" "external_api_retrieval" {
+// Lambda Function for Active_Carriers
+resource "aws_lambda_function" "selenium_scraper" {
   filename         = var.lambda_function_zip
   function_name    = var.lambda_function_name
   role             = var.lambda_role_arn
@@ -23,34 +21,93 @@ resource "aws_lambda_function" "external_api_retrieval" {
   memory_size      = 128
   publish          = true
 
-  environment {
-    variables = {
-      S3_BUCKET = aws_s3_bucket.external_api_raw_data.bucket
-    }
-  }
-
   # source_code_hash = filebase64sha256(var.lambda_function_zip)
   # To add after source code is created
 }
 
-// EventBridge Rule to Schedule Lambda
-resource "aws_cloudwatch_event_rule" "lambda_schedule" {
-  name                = var.event_rule_name
-  schedule_expression = var.schedule_expression
+// EventBridge Scheduler to retrieve Active
+resource "aws_scheduler_schedule" "get_active_carriers" {
+  name                       = "get-active-carriers"  # Reuse the existing name
+  description                = "Schedule to trigger the selenium scraper Lambda function at midnight on the first of each month"
+  schedule_expression        = "cron(0 0 1 * ? *)"
+  schedule_expression_timezone = "Asia/Singapore"
+
+  flexible_time_window {
+    mode = "OFF"
+  }
+
+  target {
+    arn       = aws_lambda_function.selenium_scraper.arn  # Reference the Lambda function's ARN dynamically
+    role_arn  = aws_iam_role.lambda_selenium_scraper_role.arn  # Reference the IAM role dynamically
+
+    retry_policy {
+      maximum_event_age_in_seconds = 86400
+      maximum_retry_attempts       = 185
+    }
+  }
 }
 
-resource "aws_cloudwatch_event_target" "lambda_target" {
-  rule      = aws_cloudwatch_event_rule.lambda_schedule.name
-  target_id = "LambdaFunctionTarget"
-  arn       = aws_lambda_function.external_api_retrieval.arn
+# IAM Role for EventBridge Scheduler to invoke Lambda
+resource "aws_iam_role" "lambda_selenium_scraper_role" {
+  name = "lambda-selenium-scraper-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "scheduler.amazonaws.com"
+        },
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
 }
 
-resource "aws_lambda_permission" "allow_eventbridge" {
-  statement_id  = "AllowExecutionFromEventBridge"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.external_api_retrieval.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.lambda_schedule.arn
+// Managed Policy Attachments
+resource "aws_iam_role_policy_attachment" "eventbridge_full_access" {
+  role       = aws_iam_role.lambda_selenium_scraper_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEventBridgeFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "scheduler_full_access" {
+  role       = aws_iam_role.lambda_selenium_scraper_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEventBridgeSchedulerFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
+  role       = aws_iam_role.lambda_selenium_scraper_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+// Custom S3 Policy for Access to S3 Bucket
+resource "aws_iam_policy" "s3_carriers_data_access" {
+  name   = "S3CarriersDataAccess"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:ListBucket"
+        ],
+        Resource = [
+          "arn:aws:s3:::active-carriers-data/*",
+          "arn:aws:s3:::active-carriers-data"
+        ]
+      }
+    ]
+  })
+}
+
+// Attach Custom S3 Policy to Role
+resource "aws_iam_role_policy_attachment" "s3_access_policy_attachment" {
+  role       = aws_iam_role.lambda_selenium_scraper_role.name
+  policy_arn = aws_iam_policy.s3_carriers_data_access.arn
 }
 
 // AWS Glue Crawler

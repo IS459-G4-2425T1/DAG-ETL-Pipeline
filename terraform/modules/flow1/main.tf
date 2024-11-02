@@ -20,25 +20,78 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "raw_data" {
   }
 }
 
-// Glue ETL Job
-resource "aws_glue_job" "historical_data_etl" {
-  name     = var.glue_job_name
+// Airline Historic ETL Job
+resource "aws_glue_job" "airline_historic_etl" {
+  name     = var.glue_job_historic_name
   role_arn = var.glue_role_arn
 
   command {
     name            = "glueetl"
-    script_location = var.glue_script_location
+    script_location = var.glue_airline_historic_etl_script
     python_version  = "3"
   }
 
   default_arguments = {
-    "--TempDir" = var.glue_temp_dir
+    "--TempDir"                       = var.glue_temp_dir
+    "--enable-auto-scaling"           = "true"
+    "--enable-continuous-cloudwatch-log" = "true"
+    "--enable-glue-datacatalog"       = "true"
+    "--enable-job-insights"           = "true"
+    "--enable-metrics"                = "true"
+    "--enable-observability-metrics"  = "true"
+    "--job-bookmark-option"           = "job-bookmark-disable"
+    "--job-language"                  = "python"
+    "--spark-event-logs-path"         = var.glue_spark_logs_dir
   }
 
-  glue_version      = "2.0"
-  number_of_workers = 2
+  glue_version      = "4.0"
+  number_of_workers = 3
   worker_type       = "G.1X"
+  max_retries       = 0
+  execution_class   = "STANDARD"
+  timeout           = 120
+
+  execution_property {
+    max_concurrent_runs = 1
+  }
 }
+
+// Historic Airline Engineering Job
+resource "aws_glue_job" "engineering_job" {
+  name     = var.glue_job_engineering_name
+  role_arn = var.glue_role_arn
+
+  command {
+    name            = "glueetl"
+    script_location = var.glue_engineering_job_script
+    python_version  = "3"
+  }
+
+  default_arguments = {
+    "--TempDir"                       = var.glue_temp_dir
+    "--enable-auto-scaling"           = "true"
+    "--enable-continuous-cloudwatch-log" = "true"
+    "--enable-glue-datacatalog"       = "true"
+    "--enable-job-insights"           = "true"
+    "--enable-metrics"                = "true"
+    "--enable-observability-metrics"  = "true"
+    "--job-bookmark-option"           = "job-bookmark-disable"
+    "--job-language"                  = "python"
+    "--spark-event-logs-path"         = var.glue_spark_logs_dir
+  }
+
+  glue_version      = "4.0"
+  number_of_workers = 3
+  worker_type       = "G.1X"
+  max_retries       = 0
+  execution_class   = "STANDARD"
+  timeout           = 120
+
+  execution_property {
+    max_concurrent_runs = 1
+  }
+}
+
 
 // SageMaker Model (for inference)
 resource "aws_sagemaker_model" "model" {
