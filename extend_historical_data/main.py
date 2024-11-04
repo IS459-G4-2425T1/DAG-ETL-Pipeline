@@ -102,9 +102,22 @@ def scrape_departure():
         # wait for the cboAirport dropdown list to load
         wait_for_page_to_load(driver, By.ID, 'cboAirport')
 
-        # List of all parameters to loop through
-        origin_airports = ['ORD', 'SFO']  # Add more as needed
-        airlines = ['AA']  # Add more airline codes as needed
+        airport_dropdown = driver.find_element(By.ID, 'cboAirport') 
+        select = Select(airport_dropdown)
+        origin_airports = [option.get_attribute('value') for option in select.options]
+
+        airline_dropdown = driver.find_element(By.ID, 'cboAirline')
+        select = Select(airline_dropdown)
+        airlines = [option.get_attribute('value') for option in select.options]
+
+        # small sample of origin airports and airlines for testing
+        # origin_airports = ['ORD', 'SFO']  # Add more as needed
+        # airlines = ['AA']  # Add more airline codes as needed
+        # Print all the values scraped
+
+        print(origin_airports)
+        print(airlines)
+    
         years = range(2012, 2013)
 
         # Loop through all combinations to download CSV files
