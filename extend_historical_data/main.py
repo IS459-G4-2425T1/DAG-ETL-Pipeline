@@ -23,8 +23,8 @@ logger.setLevel(logging.DEBUG)
 # AIRLINES = [option.get_attribute('value') for option in select.options]
 
 # small sample of origin airports and airlines for testing
-ORIGIN_AIRPORTS = ['ORD', 'SFO','DL','F9']  # Add more as needed
-AIRLINES = ['AA','MQ']  # Add more airline codes as needed
+ORIGIN_AIRPORTS = ['ORD', 'SFO']  # Add more as needed
+AIRLINES = ['AA','MQ','DL','F9']  # Add more airline codes as needed
 # Print all the values scraped
 
 print(ORIGIN_AIRPORTS)
