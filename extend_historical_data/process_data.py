@@ -38,7 +38,7 @@ departure_columns = [
 ]
 
 arrival_columns = [
-    'origin airport', 'scheduled arrival time', 'actual arrival time',
+    'origin airport', 'scheduled arrival time', 'actual arrival time', 'arrival delay (minutes)',
     'taxi-in time (minutes)'
 ]
 
@@ -53,42 +53,80 @@ final_df = pd.merge(
     on=['carrier code', 'date (mm/dd/yyyy)', 'flight number', 'tail number'],
     how='inner'
 )
+print("Columns before renaming:", final_df.columns)
+# Mapping the current columns to the new column names
+column_mapping = {
+    'actual elapsed time (minutes)': 'ActualElapsedTime',
+    'arrival delay (minutes)': 'ArrDelay',
+    'actual arrival time': 'ArrTime',
+    'scheduled arrival time': 'CRSArrTime',
+    'scheduled departure time': 'CRSDepTime',
+    'scheduled elapsed time (minutes)': 'CRSElapsedTime',
+    'delay carrier (minutes)': 'CarrierDelay',
+    'departure delay (minutes)': 'DepDelay',
+    'actual departure time': 'DepTime',
+    'destination airport': 'Dest',
+    'flight number': 'FlightNum',
+    'delay late aircraft arrival (minutes)': 'LateAircraftDelay',
+    'delay national aviation system (minutes)': 'NASDelay',
+    'origin airport': 'Origin',
+    'delay security (minutes)': 'SecurityDelay',
+    'tail number': 'TailNum',
+    'taxi-in time (minutes)': 'TaxiIn',
+    'taxi-out time (minutes)': 'TaxiOut',
+    'carrier code': 'UniqueCarrier',
+    'delay weather (minutes)': 'WeatherDelay',
+    'date (mm/dd/yyyy)': 'Date'  # Keeping this for new column generation
+}
 
+# Rename columns in final_df
+final_df = final_df.rename(columns=column_mapping)
+
+# Generate new columns based on the 'Date' column
+final_df['Date'] = pd.to_datetime(final_df['Date'], format='%m/%d/%Y')  # Ensure the 'Date' column is in datetime format
+
+# Create the 'Year', 'Month', 'DayofMonth', and 'DayOfWeek' columns
+final_df['Year'] = final_df['Date'].dt.year
+final_df['Month'] = final_df['Date'].dt.month
+final_df['DayofMonth'] = final_df['Date'].dt.day
+final_df['DayOfWeek'] = final_df['Date'].dt.isocalendar().day  # Monday=1, Sunday=7
+
+# Drop the original 'Date' column if not needed
+final_df = final_df.drop(columns=['Date'])
+
+# Add the missing columns with NULL values
+final_df['AirTime'] = pd.NA
+final_df['CancellationCode'] = pd.NA
+final_df['Cancelled'] = pd.NA
+final_df['Distance'] = pd.NA
+final_df['Diverted'] = pd.NA
+
+
+# Reorder the columns to match the required order
+final_columns = [
+    'ActualElapsedTime', 'AirTime', 'ArrDelay', 'ArrTime', 'CRSArrTime',
+    'CRSDepTime', 'CRSElapsedTime', 'CancellationCode', 'Cancelled', 'CarrierDelay',
+    'DayOfWeek', 'DayofMonth', 'DepDelay', 'DepTime', 'Dest', 'Distance', 'Diverted',
+    'FlightNum', 'LateAircraftDelay', 'Month', 'NASDelay', 'Origin', 'SecurityDelay',
+    'TailNum', 'TaxiIn', 'TaxiOut', 'UniqueCarrier', 'WeatherDelay', 'Year'
+]
+
+final_df = final_df[final_columns]
+
+# Print the final DataFrame to verify
+print(final_df.head())
+
+print(final_df.head())
 # Display the number of rows
 print("Number of rows in the departure DataFrame:", departure_df.shape[0])
 print("Number of rows in the arrival DataFrame:", arrival_df.shape[0])
 print("Number of rows in the final combined DataFrame:", final_df.shape[0])
 
-# # Define the columns to retain in the final DataFrame
-# departure_columns = [
-#     'Carrier Code', 'Date (MM/DD/YYYY)', 'Flight Number', 'Tail Number',
-#     'Destination Airport', 'Scheduled Departure Time', 'Actual Departure Time',
-#     'Scheduled Elapsed Time (Minutes)', 'Actual Elapsed Time (Minutes)',
-#     'Departure Delay (Minutes)', 'Taxi-Out Time (Minutes)',
-#     'Delay Carrier (Minutes)', 'Delay Weather (Minutes)',
-#     'Delay National Aviation System (Minutes)', 'Delay Security (Minutes)',
-#     'Delay Late Aircraft Arrival (Minutes)'
-# ]
+print("Duplicates in departure DataFrame:", departure_df.duplicated().sum())
+print("Duplicates in arrival DataFrame:", arrival_df.duplicated().sum())
 
-# arrival_columns = [
-#     'Origin Airport', 'Scheduled Arrival Time', 'Actual Arrival Time',
-#     'Taxi-In time (Minutes)'
-# ]
+# Specify the file path and name for the CSV file
+output_path = '/Users/renkee/Desktop/SMU/Y4S1/IS459/Project/DAG-ETL-Pipeline/extend_historical_data/combined_data.csv'
 
-# # Filter the DataFrames to keep only necessary columns
-# departure_df = departure_df[departure_columns]
-# arrival_df = arrival_df[['Carrier Code', 'Date (MM/DD/YYYY)', 'Flight Number', 'Tail Number'] + arrival_columns]
-
-# # Perform the join on the specified keys
-# final_df = pd.merge(
-#     departure_df,
-#     arrival_df,
-#     on=['Carrier Code', 'Date (MM/DD/YYYY)', 'Flight Number', 'Tail Number'],
-#     how='inner'
-# )
-
-# # Display the final DataFrame or save it for further processing
-# print(final_df.head())
-
-# # Optional: Save to a CSV file
-# final_df.to_csv('combined_flight_data.csv', index=False)
+# Write the DataFrame to a CSV file
+final_df.to_csv(output_path, index=False)

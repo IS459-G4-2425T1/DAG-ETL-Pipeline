@@ -14,6 +14,24 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
+# airport_dropdown = driver.find_element(By.ID, 'cboAirport') 
+# select = Select(airport_dropdown)
+# ORIGIN_AIRPORTS = [option.get_attribute('value') for option in select.options]
+
+# airline_dropdown = driver.find_element(By.ID, 'cboAirline')
+# select = Select(airline_dropdown)
+# AIRLINES = [option.get_attribute('value') for option in select.options]
+
+# small sample of origin airports and airlines for testing
+ORIGIN_AIRPORTS = ['ORD', 'SFO','DL','F9']  # Add more as needed
+AIRLINES = ['AA','MQ']  # Add more airline codes as needed
+# Print all the values scraped
+
+print(ORIGIN_AIRPORTS)
+print(AIRLINES)
+
+YEARS = range(2008, 2025)
+
 # Initialize WebDriver with proper options
 def init_driver(download_dir):
     chrome_options = webdriver.ChromeOptions()
@@ -78,14 +96,13 @@ def wait_for_download_to_complete(directory, timeout=60):
     """
     Wait for a file to be fully downloaded by checking for the absence of .crdownload files.
     """
-    time.sleep(1)
+    time.sleep(5)
     for _ in range(timeout):
         if not any(f.endswith('.crdownload') for f in os.listdir(directory)):
             print("File Downloaded")
             return True
         time.sleep(1)
     return False
-
 
 def scrape_departure():
     print("STARTING TO SCRAPE DEPARTURE DATA...")
@@ -102,72 +119,57 @@ def scrape_departure():
         # wait for the cboAirport dropdown list to load
         wait_for_page_to_load(driver, By.ID, 'cboAirport')
 
-        airport_dropdown = driver.find_element(By.ID, 'cboAirport') 
-        select = Select(airport_dropdown)
-        origin_airports = [option.get_attribute('value') for option in select.options]
+        # Select checkboxes for year, month, and day and statistics
+        # all these are all boxes that needs to be checked once
+        select_checkbox(driver, 'chkAllStatistics') 
+        for year in YEARS:
+            select_checkbox_by_value(driver, year)
 
-        airline_dropdown = driver.find_element(By.ID, 'cboAirline')
-        select = Select(airline_dropdown)
-        airlines = [option.get_attribute('value') for option in select.options]
+        select_checkbox(driver, 'chkAllMonths')
+        select_checkbox(driver, 'chkAllDays') 
 
-        # small sample of origin airports and airlines for testing
-        # origin_airports = ['ORD', 'SFO']  # Add more as needed
-        # airlines = ['AA']  # Add more airline codes as needed
-        # Print all the values scraped
-
-        print(origin_airports)
-        print(airlines)
-    
-        years = range(2012, 2013)
 
         # Loop through all combinations to download CSV files
-        for origin in origin_airports:
-            for airline in airlines:
-                for year in years:
-                    print("Starting selections for {}:{} year {}...".format(origin,airline,year))
-                    select_checkbox(driver, 'chkAllStatistics') 
-                    # Select the options for origin airport and airline
-                    select_dropdown(driver, 'cboAirport', origin)
-                    select_dropdown(driver, 'cboAirline', airline)
+        for origin in ORIGIN_AIRPORTS:
+            for airline in AIRLINES:
+                # Select the options for origin airport and airline
+                select_dropdown(driver, 'cboAirport', origin)
+                select_dropdown(driver, 'cboAirline', airline)
 
-                    # Select checkboxes for year, month, and day
-                    select_checkbox_by_value(driver, year)
-                    select_checkbox(driver, 'chkAllMonths')
-                    select_checkbox(driver, 'chkAllDays') 
+                # Submit or trigger search (click the search button)
+                driver.find_element(By.ID, 'btnSubmit').click()
 
-                    # Submit or trigger search (click the search button)
-                    driver.find_element(By.ID, 'btnSubmit').click()
+                # Wait for the page to load results, give it 30 seconds since we doing many years of data
+                time.sleep(30)
 
-                    # Wait for the page to load results
-                    time.sleep(5)
+                # Check for the presence of data or the "No data found" message
+                if "No data found" in driver.page_source:
+                    print(f"No data for {origin}, {airline}, {year}")
+                else:
+                    # Wait until the download button is available and click it
+                    download_button = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.ID, 'DL_CSV')))
+                    download_button.click()
 
-                    # Check for the presence of data or the "No data found" message
-                    if "No data found" in driver.page_source:
-                        print(f"No data for {origin}, {airline}, {year}")
-                    else:
-                        # Wait until the download button is available and click it
-                        download_button = WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.ID, 'DL_CSV')))
-                        download_button.click()
-
-                        if wait_for_download_to_complete(download_dir, timeout=60):
-                            latest_file = get_latest_file(download_dir)
-                            if latest_file:
-                                new_filename = os.path.join(download_dir, f'{origin}_{airline}_{year}.csv')
-                                os.rename(latest_file, new_filename)
-                                print(f"Renamed {latest_file} to: {new_filename}")
-                            else:
-                                print("No new file found for renaming.")
+                    # give it max 5mins to download
+                    if wait_for_download_to_complete(download_dir, timeout=300):
+                        latest_file = get_latest_file(download_dir)
+                        print("latest file name (old): ".format(latest_file))
+                        if latest_file:
+                            new_filename = os.path.join(download_dir, f'{origin}_{airline}.csv')
+                            os.rename(latest_file, new_filename)
+                            print(f"Renamed {latest_file} to: {new_filename}")
                         else:
-                            print("Download did not complete within the expected time.")
+                            print("No new file found for renaming.")
+                    else:
+                        print("Download did not complete within the expected time.")
 
-                print("Done for Origin Airport: {} Airline: {} Year:{}...".format(origin,airline,year))
+                print("Done for Origin Airport: {} Airline: {}".format(origin,airline))
 
     except Exception as e:
         print(f"An error occurred: {e}")
 
     finally:
         driver.quit()
-    pass
 
 def scrape_arrival():
     print("STARTING TO SCRAPE ARRIVAL DATA...")
@@ -184,62 +186,59 @@ def scrape_arrival():
         # wait for the cboAirport dropdown list to load
         wait_for_page_to_load(driver, By.ID, 'cboAirport')
 
-        # List of all parameters to loop through
-        origin_airports = ['ORD', 'SFO']  # Add more as needed
-        airlines = ['AA']  # Add more airline codes as needed
-        years = range(2012, 2013)
+        # Select checkboxes for year, month, and day and statistics
+        # all these are all boxes that needs to be checked once
+        select_checkbox(driver, 'chkAllStatistics') 
+        for year in YEARS:
+            select_checkbox_by_value(driver, year)
+
+        select_checkbox(driver, 'chkAllMonths')
+        select_checkbox(driver, 'chkAllDays') 
+
 
         # Loop through all combinations to download CSV files
-        for origin in origin_airports:
-            for airline in airlines:
-                for year in years:
-                    print("Starting selections for {}:{} year {}...".format(origin,airline,year))
-                    select_checkbox(driver, 'chkAllStatistics') 
-                    # Select the options for origin airport and airline
-                    select_dropdown(driver, 'cboAirport', origin)
-                    select_dropdown(driver, 'cboAirline', airline)
+        for origin in ORIGIN_AIRPORTS:
+            for airline in AIRLINES:
+                # Select the options for origin airport and airline
+                select_dropdown(driver, 'cboAirport', origin)
+                select_dropdown(driver, 'cboAirline', airline)
 
-                    # Select checkboxes for year, month, and day
-                    select_checkbox_by_value(driver, year)
-                    select_checkbox(driver, 'chkAllMonths')
-                    select_checkbox(driver, 'chkAllDays') 
+                # Submit or trigger search (click the search button)
+                driver.find_element(By.ID, 'btnSubmit').click()
 
-                    # Submit or trigger search (click the search button)
-                    driver.find_element(By.ID, 'btnSubmit').click()
+                # Wait for the page to load results, give it 30 seconds since we doing many YEARS of data
+                time.sleep(30)
 
-                    # Wait for the page to load results
-                    time.sleep(5)
+                # Check for the presence of data or the "No data found" message
+                if "No data found" in driver.page_source:
+                    print(f"No data for {origin}, {airline}, {year}")
+                else:
+                    # Wait until the download button is available and click it
+                    download_button = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.ID, 'DL_CSV')))
+                    download_button.click()
 
-                    # Check for the presence of data or the "No data found" message
-                    if "No data found" in driver.page_source:
-                        print(f"No data for {origin}, {airline}, {year}")
-                    else:
-                        # Wait until the download button is available and click it
-                        download_button = WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.ID, 'DL_CSV')))
-                        download_button.click()
-
-                        if wait_for_download_to_complete(download_dir, timeout=60):
-                            latest_file = get_latest_file(download_dir)
-                            if latest_file:
-                                new_filename = os.path.join(download_dir, f'{origin}_{airline}_{year}.csv')
-                                os.rename(latest_file, new_filename)
-                                print(f"Downloaded and renamed {latest_file} to: {new_filename}")
-                            else:
-                                print("No new file found for renaming.")
+                    # give it max 5mins to download
+                    if wait_for_download_to_complete(download_dir, timeout=300):
+                        latest_file = get_latest_file(download_dir)
+                        if latest_file:
+                            new_filename = os.path.join(download_dir, f'{origin}_{airline}.csv')
+                            os.rename(latest_file, new_filename)
+                            print(f"Renamed {latest_file} to: {new_filename}")
                         else:
-                            print("Download did not complete within the expected time.")
+                            print("No new file found for renaming.")
+                    else:
+                        print("Download did not complete within the expected time.")
 
-                print("Done for Origin Airport: {} Airline: {} Year:{}...".format(origin,airline,year))
+                print("Done for Origin Airport: {} Airline: {}".format(origin,airline))
 
     except Exception as e:
         print(f"An error occurred: {e}")
 
     finally:
         driver.quit()
-    pass
-
+    
 
 if __name__ == '__main__':
     logging.info('reach name -- main')
     scrape_departure()
-    # scrape_arrival()
+    scrape_arrival()
