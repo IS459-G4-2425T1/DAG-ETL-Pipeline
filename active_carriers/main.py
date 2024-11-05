@@ -9,6 +9,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import boto3
 import json
 import os
+import csv
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -108,8 +109,26 @@ def scrape_website():
     
     return active_carriers
 
+# def process_data(data):
+#     json_data = {}
+    
+#     for item in data:
+#         start_index = item.rfind('(')
+#         end_index = item.rfind(')')
+        
+#         if start_index != -1 and end_index != -1:
+#             key = item[start_index + 1:end_index].strip()  # airline code
+#             value = item[:start_index].strip()  # airline name
+#             json_data[key] = value
+
+#     filepath = "/tmp/active_carriers.json"
+#     with open(filepath, 'w') as json_file:
+#         json.dump(json_data, json_file, indent=4)
+    
+#     return filepath
+
 def process_data(data):
-    json_data = {}
+    csv_data = []
     
     for item in data:
         start_index = item.rfind('(')
@@ -118,11 +137,13 @@ def process_data(data):
         if start_index != -1 and end_index != -1:
             key = item[start_index + 1:end_index].strip()  # airline code
             value = item[:start_index].strip()  # airline name
-            json_data[key] = value
+            csv_data.append([key, value])
 
-    filepath = "/tmp/active_carriers.json"
-    with open(filepath, 'w') as json_file:
-        json.dump(json_data, json_file, indent=4)
+    filepath = "/tmp/active_carriers.csv"
+    with open(filepath, 'w', newline='') as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerow(['Airline Code', 'Airline Name'])  # header
+        writer.writerows(csv_data)  # write data rows
     
     return filepath
 
@@ -147,12 +168,12 @@ def lambda_handler(event, context):
     active_carriers = scrape_website()
     filepath = process_data(active_carriers)
     # Fix the order and add the filename parameter
-    upload_to_s3(filepath, "active-carriers-data", "active_carriers.json")
+    upload_to_s3(filepath, "active-carriers-data", "active_carriers.csv")
     delete_local_file(filepath)
 
 if __name__ == "__main__":
    active_carriers = scrape_website()
    filepath = process_data(active_carriers)
-   upload_to_s3(filepath, "active-carriers-data", "active_carriers.json")
+   upload_to_s3(filepath, "active-carriers-data", "active_carriers.csv")
    delete_local_file(filepath)
 
