@@ -9,6 +9,7 @@ import os
 import time
 import logging
 import glob
+import process_data
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -28,6 +29,12 @@ def init_driver(download_dir):
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage') 
     chrome_options.add_argument('--window-size=1920x1080')  
+    chrome_options.add_argument('--single-process')
+    chrome_options.add_argument('--disable-dev-tools')
+    chrome_options.add_argument('--no-zygote')
+    chrome_options.add_argument('--disable-gpu')
+
+    chrome_options.binary_location = os.environ.get('CHROME_BINARY_PATH', '/opt/chrome-linux/chrome')
 
     # Set download preferences
     prefs = {
@@ -37,8 +44,8 @@ def init_driver(download_dir):
     }
     chrome_options.add_experimental_option("prefs", prefs)
 
-    # service = Service(os.environ.get('CHROMEDRIVER_PATH', '/opt/chromedriver'))
-    service = Service(ChromeDriverManager().install())
+    service = Service(os.environ.get('CHROMEDRIVER_PATH', '/opt/chromedriver'))
+    # service = Service(ChromeDriverManager().install())
     
     return webdriver.Chrome(
         service=service,
@@ -97,7 +104,8 @@ def scrape_departure():
     print("STARTING TO SCRAPE DEPARTURE DATA...")
     
     # Initialize the download directory path
-    download_dir = os.path.expanduser('~/Desktop/SMU/Y4S1/IS459/Project/DAG-ETL-Pipeline/extend_historical_data/departure_data')
+    #download_dir = os.path.expanduser('~/Desktop/SMU/Y4S1/IS459/Project/DAG-ETL-Pipeline/extend_historical_data/departure_data')
+    download_dir = '/tmp/departure_data'
     if not os.path.exists(download_dir):
         os.makedirs(download_dir)
 
@@ -178,7 +186,8 @@ def scrape_arrival():
     print("STARTING TO SCRAPE ARRIVAL DATA...")
     
     # Initialize the download directory path
-    download_dir = os.path.expanduser('~/Desktop/SMU/Y4S1/IS459/Project/DAG-ETL-Pipeline/extend_historical_data/arrival_data')
+    #download_dir = os.path.expanduser('~/Desktop/SMU/Y4S1/IS459/Project/DAG-ETL-Pipeline/extend_historical_data/arrival_data')
+    download_dir = '/tmp/arrival_data'
     if not os.path.exists(download_dir):
         os.makedirs(download_dir)
 
@@ -253,8 +262,14 @@ def scrape_arrival():
 
     finally:
         driver.quit()
-
-if __name__ == '__main__':
-    logging.info('reach name -- main')
+    
+def lambda_handler(event, context):
+    # logging.info('reach name -- main')
     scrape_departure()
     scrape_arrival()
+    process_data.main()
+
+# if __name__ == '__main__':
+#     # logging.info('reach name -- main')
+#     scrape_departure()
+#     scrape_arrival()
