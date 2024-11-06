@@ -3,6 +3,7 @@ import os
 import boto3
 import logging
 import shutil
+from dotenv import load_dotenv
 
 # Directory containing CSV files
 # departure_folder = '/Users/renkee/Desktop/SMU/Y4S1/IS459/Project/DAG-ETL-Pipeline/extend_historical_data/departure_data'
@@ -11,8 +12,12 @@ import shutil
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-departure_folder="/tmp/departure_data"
-arrival_folder="/tmp/arrival_data"
+departure_folder="/home/ubuntu/scraper/departure_data"
+arrival_folder="/home/ubuntu/scraper/arrival_data"
+
+# Retrieve AWS credentials from environment variables
+AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 
 
 # Function to read and standardize column names
@@ -23,7 +28,13 @@ def read_and_standardize_csv(file_path):
 
 #upload function
 def upload_to_s3(filepath, bucket_name, filename):
-    s3 = boto3.client('s3')
+
+    s3 = boto3.client(
+        's3',
+        aws_access_key_id=AWS_ACCESS_KEY_ID,
+        aws_secret_access_key= AWS_SECRET_ACCESS_KEY,
+    )
+
     try:
         s3.upload_file(filepath, bucket_name, filename)
     except Exception as e:
@@ -165,7 +176,7 @@ def main():
     final_df.to_csv(output_path, index=False)
     
     upload_to_s3(output_path, "airline-additional-data", "historical_2024_data.csv")
-    delete_local_path(departure_folder)
-    delete_local_path(arrival_folder)
-    delete_local_path(output_path)
+    # delete_local_path(departure_folder)
+    # delete_local_path(arrival_folder)
+    # delete_local_path(output_path)
 

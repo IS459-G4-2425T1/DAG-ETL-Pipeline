@@ -9,18 +9,11 @@ import os
 import time
 import logging
 import glob
+from datetime import datetime
 import process_data
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
-
-
-# small sample of origin airports and airlines for testing
-ORIGIN_AIRPORTS = ['ORD', 'SFO']  # Add more as needed
-AIRLINES = ['AA','MQ','DL','F9']  # Add more airline codes as needed
-# Print all the values scraped
-
-# YEARS = range(2008, 2025)
 
 # Initialize WebDriver with proper options
 def init_driver(download_dir):
@@ -104,8 +97,8 @@ def scrape_departure():
     print("STARTING TO SCRAPE DEPARTURE DATA...")
     
     # Initialize the download directory path
-    #download_dir = os.path.expanduser('~/Desktop/SMU/Y4S1/IS459/Project/DAG-ETL-Pipeline/extend_historical_data/departure_data')
-    download_dir = '/tmp/departure_data'
+    # download_dir = os.path.expanduser('~/Desktop/SMU/Y4S1/IS459/Project/DAG-ETL-Pipeline/extend_historical_data/departure_data')
+    download_dir = '/home/ubuntu/scraper/departure_data'
     if not os.path.exists(download_dir):
         os.makedirs(download_dir)
 
@@ -120,16 +113,41 @@ def scrape_departure():
         airport_dropdown = driver.find_element(By.ID, 'cboAirport')
         select_airport = Select(airport_dropdown)
         airports = [option.text for option in select_airport.options]  # Get the display text
+         # half the airport list
+        airports = airports[::4]
 
-        # Get all display words for options in the airline dropdown
-        airline_dropdown = driver.find_element(By.ID, 'cboAirline')
-        select_airline = Select(airline_dropdown)
-        airlines = [option.text for option in select_airline.options]  # Get the display text
+        # # Get all display words for options in the airline dropdown
+        # airline_dropdown = driver.find_element(By.ID, 'cboAirline')
+        # select_airline = Select(airline_dropdown)
+        # airlines = [option.text for option in select_airline.options]  # Get the display text
+        airlines = [
+            'Alaska Airlines Inc. (AS)',
+            'Allegiant Air (G4)',
+            'American Airlines Inc. (AA)',
+            'American Eagle Airlines Inc. (MQ)',
+            'Comair Inc. (OH)',
+            'Delta Airlines Inc. (DL)',
+            'Endeavor Air Inc. (9E)',
+            'Envoy Air (MQ)',
+            'Frontier Airlines Inc. (F9)',
+            'Hawaiian Airlines Inc. (HA)',
+            'Horizon Air (QX)',
+            'JetBlue Airways (B6)',
+            'Mesa Airlines Inc. (YV)',
+            'PSA Airlines Inc. (OH)',
+            'Pinnacle Airlines Inc. (9E)',
+            'Republic Airline (YX)',
+            'SkyWest Airlines Inc. (OO)',
+            'Southwest Airlines Co. (WN)',
+            'Spirit Airlines (NK)',
+            'United Airlines Inc. (UA)'
+        ]
+
 
         # Print to check the display words
         print()
-        print("Airports:", airports)
-        print("Airlines:", airlines)
+        print("Count Airports:", len(airports))
+        print("Count Airlines:", len(airlines))
 
         # Select checkboxes for year, month, and day and statistics
         # all these are all boxes that needs to be checked once
@@ -162,11 +180,16 @@ def scrape_departure():
                     download_button.click()
 
                     # give it max 5mins to download
-                    if wait_for_download_to_complete(download_dir, timeout=120):
+                    if wait_for_download_to_complete(download_dir, timeout=60):
                         latest_file = get_latest_file(download_dir)
                         print("latest file name (old): ".format(latest_file))
                         if latest_file:
-                            new_filename = os.path.join(download_dir, f'{origin}_{airline}.csv')
+
+                            # new_filename = os.path.join(download_dir, f'{origin}_{airline}.csv')
+                            # Set the new filename with the timestamp
+                            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                            new_filename = os.path.join(download_dir, f'{timestamp}.csv')
+
                             os.rename(latest_file, new_filename)
                             print(f"Renamed {latest_file} to: {new_filename}")
                         else:
@@ -186,8 +209,8 @@ def scrape_arrival():
     print("STARTING TO SCRAPE ARRIVAL DATA...")
     
     # Initialize the download directory path
-    #download_dir = os.path.expanduser('~/Desktop/SMU/Y4S1/IS459/Project/DAG-ETL-Pipeline/extend_historical_data/arrival_data')
-    download_dir = '/tmp/arrival_data'
+    # download_dir = os.path.expanduser('~/Desktop/SMU/Y4S1/IS459/Project/DAG-ETL-Pipeline/extend_historical_data/arrival_data')
+    download_dir = '/home/ubuntu/scraper/arrival_data'
     if not os.path.exists(download_dir):
         os.makedirs(download_dir)
 
@@ -203,14 +226,39 @@ def scrape_arrival():
         select_airport = Select(airport_dropdown)
         airports = [option.text for option in select_airport.options]  # Get the display text
 
-        # Get all display words for options in the airline dropdown
-        airline_dropdown = driver.find_element(By.ID, 'cboAirline')
-        select_airline = Select(airline_dropdown)
-        airlines = [option.text for option in select_airline.options]  # Get the display text
+        # half the airport list
+        airports = airports[::4]
+
+        # # Get all display words for options in the airline dropdown
+        # airline_dropdown = driver.find_element(By.ID, 'cboAirline')
+        # select_airline = Select(airline_dropdown)
+        # airlines = [option.text for option in select_airline.options]  # Get the display text
+        airlines = [
+            'Alaska Airlines Inc. (AS)',
+            'Allegiant Air (G4)',
+            'American Airlines Inc. (AA)',
+            'American Eagle Airlines Inc. (MQ)',
+            'Comair Inc. (OH)',
+            'Delta Airlines Inc. (DL)',
+            'Endeavor Air Inc. (9E)',
+            'Envoy Air (MQ)',
+            'Frontier Airlines Inc. (F9)',
+            'Hawaiian Airlines Inc. (HA)',
+            'Horizon Air (QX)',
+            'JetBlue Airways (B6)',
+            'Mesa Airlines Inc. (YV)',
+            'PSA Airlines Inc. (OH)',
+            'Pinnacle Airlines Inc. (9E)',
+            'Republic Airline (YX)',
+            'SkyWest Airlines Inc. (OO)',
+            'Southwest Airlines Co. (WN)',
+            'Spirit Airlines (NK)',
+            'United Airlines Inc. (UA)'
+        ]
 
         # Print to check the display words
-        print("Airports:", airports)
-        print("Airlines:", airlines)
+        print("Count Airports:", len(airports))
+        print("Count Airlines:", len(airlines))
 
         # Select checkboxes for year, month, and day and statistics
         # all these are all boxes that needs to be checked once
@@ -243,11 +291,14 @@ def scrape_arrival():
                     download_button.click()
 
                     # give it max 5mins to download
-                    if wait_for_download_to_complete(download_dir, timeout=120):
+                    if wait_for_download_to_complete(download_dir, timeout=60):
                         latest_file = get_latest_file(download_dir)
                         print("latest file name (old): ".format(latest_file))
                         if latest_file:
-                            new_filename = os.path.join(download_dir, f'{origin}_{airline}.csv')
+                            # new_filename = os.path.join(download_dir, f'{origin}_{airline}.csv')
+                            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                            new_filename = os.path.join(download_dir, f'{timestamp}.csv')
+
                             os.rename(latest_file, new_filename)
                             print(f"Renamed {latest_file} to: {new_filename}")
                         else:
@@ -262,14 +313,9 @@ def scrape_arrival():
 
     finally:
         driver.quit()
+
+if __name__ == '__main__':
     
-def lambda_handler(event, context):
-    # logging.info('reach name -- main')
     scrape_departure()
     scrape_arrival()
     process_data.main()
-
-# if __name__ == '__main__':
-#     # logging.info('reach name -- main')
-#     scrape_departure()
-#     scrape_arrival()
