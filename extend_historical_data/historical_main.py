@@ -150,7 +150,8 @@ def scrape_departure():
         # Select checkboxes for year, month, and day and statistics
         # all these are all boxes that needs to be checked once
         select_checkbox(driver, 'chkAllStatistics') 
-        select_checkbox_by_value(driver, '2024')
+        for year in range(2008, 2025): 
+            select_checkbox_by_value(driver, year)
 
         select_checkbox(driver, 'chkAllMonths')
         select_checkbox(driver, 'chkAllDays') 
@@ -174,11 +175,11 @@ def scrape_departure():
                     print(f"No data for {origin}, {airline}")
                 else:
                     # Wait until the download button is available and click it
-                    download_button = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.ID, 'DL_CSV')))
+                    download_button = WebDriverWait(driver, 30).until(EC.element_to_be_clickable((By.ID, 'DL_CSV')))
                     download_button.click()
 
                     # give it max 5mins to download
-                    if wait_for_download_to_complete(download_dir, timeout=60):
+                    if wait_for_download_to_complete(download_dir, timeout=180):
                         latest_file = get_latest_file(download_dir)
                         print("latest file name (old): ".format(latest_file))
                         if latest_file:
@@ -259,8 +260,10 @@ def scrape_arrival():
 
         # Select checkboxes for year, month, and day and statistics
         # all these are all boxes that needs to be checked once
-        select_checkbox(driver, 'chkAllStatistics') 
-        select_checkbox_by_value(driver, '2024')
+        select_checkbox(driver, 'chkAllStatistics')
+
+        for year in range(2008, 2025): 
+            select_checkbox_by_value(driver, year)
 
         select_checkbox(driver, 'chkAllMonths')
         select_checkbox(driver, 'chkAllDays') 
@@ -284,11 +287,11 @@ def scrape_arrival():
                     print(f"No data for {origin}, {airline}")
                 else:
                     # Wait until the download button is available and click it
-                    download_button = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.ID, 'DL_CSV')))
+                    download_button = WebDriverWait(driver, 30).until(EC.element_to_be_clickable((By.ID, 'DL_CSV')))
                     download_button.click()
 
                     # give it max 5mins to download
-                    if wait_for_download_to_complete(download_dir, timeout=60):
+                    if wait_for_download_to_complete(download_dir, timeout=180):
                         latest_file = get_latest_file(download_dir)
                         print("latest file name (old): ".format(latest_file))
                         if latest_file:
