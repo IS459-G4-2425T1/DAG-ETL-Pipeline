@@ -17,10 +17,11 @@ import { useTheme } from '@mui/material/styles';
 
 const dashboardId1 = process.env.REACT_APP_QUICKSIGHT_DASHBOARD_ID_1;
 const dashboardId2 = process.env.REACT_APP_QUICKSIGHT_DASHBOARD_ID_2;
+const dashboardId3 = process.env.REACT_APP_QUICKSIGHT_DASHBOARD_ID_3;
 
 function App() {
   const [currentTab, setCurrentTab] = useState(0);
-  const [embedUrls, setEmbedUrls] = useState({ dashboard1: '', dashboard2: '' });
+  const [embedUrls, setEmbedUrls] = useState({ dashboard1: '', dashboard2: '', dashboard3: '' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const theme = useTheme();
@@ -28,17 +29,18 @@ function App() {
 
   useEffect(() => {
     refetchEmbedUrl(currentTab);
-  }, []);
+  }, [currentTab]);
 
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
 
-    if (newValue === 2) {
+    if (newValue === 3) {
       setError(null);
     } else {
+      const dashboardKey = newValue === 0 ? 'dashboard1' : newValue === 1 ? 'dashboard2' : 'dashboard3';
       setEmbedUrls((prev) => ({
         ...prev,
-        [newValue === 0 ? 'dashboard1' : 'dashboard2']: '',
+        [dashboardKey]: '',
       }));
       refetchEmbedUrl(newValue);
     }
@@ -53,17 +55,19 @@ function App() {
         dashboardId = dashboardId1;
       } else if (tabIndex === 1) {
         dashboardId = dashboardId2;
+      } else if (tabIndex === 2) {
+        dashboardId = dashboardId3;
       } else {
         setLoading(false);
         return;
       }
-      
+
       console.log("Requesting embed URL for Dashboard ID:", dashboardId);
 
       const embedUrl = await getQuickSightEmbedUrl(dashboardId);
       setEmbedUrls((prev) => ({
         ...prev,
-        [tabIndex === 0 ? 'dashboard1' : 'dashboard2']: embedUrl,
+        [tabIndex === 0 ? 'dashboard1' : tabIndex === 1 ? 'dashboard2' : 'dashboard3']: embedUrl,
       }));
       setError(null);
     } catch (err) {
@@ -98,6 +102,7 @@ function App() {
         >
           <Tab label="Pipeline 1 QuickSight Dashboard" />
           <Tab label="Pipeline 2 QuickSight Dashboard" />
+          <Tab label="Pipeline 3 QuickSight Dashboard" />
           <Tab label="Airline Delay Predictions" />
         </Tabs>
 
@@ -106,7 +111,7 @@ function App() {
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '600px' }}>
               <CircularProgress />
             </Box>
-          ) : error && (currentTab === 0 || currentTab === 1) ? (
+          ) : error && (currentTab === 0 || currentTab === 1 || currentTab === 2) ? (
             <Alert severity="error">{error}</Alert>
           ) : (
             <>
@@ -125,6 +130,13 @@ function App() {
                 )
               )}
               {currentTab === 2 && (
+                embedUrls.dashboard3 ? (
+                  <QuickSightEmbed embedUrl={embedUrls.dashboard3} />
+                ) : (
+                  <Alert severity="warning">QuickSight Dashboard 3 is not ready for viewing or has an invalid ID.</Alert>
+                )
+              )}
+              {currentTab === 3 && (
                 <Box sx={{ mt: 4 }}>
                   <Typography variant="h5" gutterBottom>
                     SageMaker Predictions
