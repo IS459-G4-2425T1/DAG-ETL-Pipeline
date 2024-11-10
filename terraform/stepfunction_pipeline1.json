@@ -116,7 +116,7 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::aws-sdk:glue:startJobRun",
       "Parameters": {
-        "JobName": "airline-historic-etl-pipeline1-script-version"
+        "JobName": "airline-historic-clean-pipeline1"
       },
       "ResultPath": "$.AirlineHistoricETLJob",
       "Next": "Check Airline Historic ETL Job Status"
@@ -125,7 +125,7 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::aws-sdk:glue:getJobRun",
       "Parameters": {
-        "JobName": "airline-historic-etl-pipeline1-script-version",
+        "JobName": "airline-historic-clean-pipeline1",
         "RunId.$": "$.AirlineHistoricETLJob.JobRunId"
       },
       "ResultPath": "$.AirlineHistoricETLJobStatus",
@@ -233,7 +233,7 @@
       "Resource": "arn:aws:states:::aws-sdk:s3:listObjectsV2",
       "Parameters": {
         "Bucket": "pipeline1-data-storage",
-        "Prefix": "processed-data/df/part-"
+        "Prefix": "processed-data/df/"
       },
       "ResultPath": "$.ThirdS3List",
       "Next": "Are Third S3 Objects Available?"
@@ -244,10 +244,48 @@
         {
           "Variable": "$.ThirdS3List.KeyCount",
           "NumericGreaterThan": 0,
-          "Next": "Run Athena Queries in Parallel"
+          "Next": "Start pipeline1-processed-data Crawler"
         }
       ],
       "Default": "Wait Before Checking Third S3 Objects Again"
+    },
+    "Start pipeline1-processed-data Crawler": {
+      "Type": "Task",
+      "Parameters": {
+        "Name": "pipeline1-processed-data"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:glue:startCrawler",
+      "Next": "Wait Before Checking Crawler 2 Job Status"
+    },
+    "Wait Before Checking Crawler 2 Job Status": {
+      "Type": "Wait",
+      "Seconds": 5,
+      "Next": "Check Crawler Job 2 Status"
+    },
+    "Check Crawler Job 2 Status": {
+      "Type": "Task",
+      "Parameters": {
+        "Name": "pipeline1-processed-data"
+      },
+      "ResultPath": "$.CrawlerStatus",
+      "Resource": "arn:aws:states:::aws-sdk:glue:getCrawler",
+      "Next": "Is Crawler Job 2 Complete?"
+    },
+    "Is Crawler Job 2 Complete?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.CrawlerStatus.Crawler.State",
+          "StringEquals": "READY",
+          "Next": "Run Athena Queries in Parallel"
+        }
+      ],
+      "Default": "Wait"
+    },
+    "Wait": {
+      "Type": "Wait",
+      "Seconds": 30,
+      "Next": "Check Crawler Job 2 Status"
     },
     "Wait Before Checking Third S3 Objects Again": {
       "Type": "Wait",
@@ -347,21 +385,21 @@
               "Type": "Task",
               "Resource": "arn:aws:states:::athena:getQueryExecution",
               "Parameters": {
-                "QueryExecutionId.$": "$.AthenaQuery3Result.QueryExecutionId"
+                "QueryExecutionId.$": "$.AthenaQuery2Result.QueryExecutionId"
               },
-              "ResultPath": "$.AthenaQuery3Status",
+              "ResultPath": "$.AthenaQuery2Status",
               "Next": "Is Athena Query 2 Complete?"
             },
             "Is Athena Query 2 Complete?": {
               "Type": "Choice",
               "Choices": [
                 {
-                  "Variable": "$.AthenaQuery3Status.QueryExecution.Status.State",
+                  "Variable": "$.AthenaQuery2Status.QueryExecution.Status.State",
                   "StringEquals": "SUCCEEDED",
                   "Next": "Athena Query 2 Complete"
                 },
                 {
-                  "Variable": "$.AthenaQuery3Status.QueryExecution.Status.State",
+                  "Variable": "$.AthenaQuery2Status.QueryExecution.Status.State",
                   "StringEquals": "FAILED",
                   "Next": "Athena Query 2 Failed"
                 }
@@ -410,21 +448,21 @@
               "Type": "Task",
               "Resource": "arn:aws:states:::athena:getQueryExecution",
               "Parameters": {
-                "QueryExecutionId.$": "$.AthenaQuery4Result.QueryExecutionId"
+                "QueryExecutionId.$": "$.AthenaQuery3Result.QueryExecutionId"
               },
-              "ResultPath": "$.AthenaQuery4Status",
+              "ResultPath": "$.AthenaQuery3Status",
               "Next": "Is Athena Query 3 Complete?"
             },
             "Is Athena Query 3 Complete?": {
               "Type": "Choice",
               "Choices": [
                 {
-                  "Variable": "$.AthenaQuery4Status.QueryExecution.Status.State",
+                  "Variable": "$.AthenaQuery3Status.QueryExecution.Status.State",
                   "StringEquals": "SUCCEEDED",
                   "Next": "Athena Query 3 Complete"
                 },
                 {
-                  "Variable": "$.AthenaQuery4Status.QueryExecution.Status.State",
+                  "Variable": "$.AthenaQuery3Status.QueryExecution.Status.State",
                   "StringEquals": "FAILED",
                   "Next": "Athena Query 3 Failed"
                 }
@@ -466,28 +504,28 @@
               "ResultSelector": {
                 "QueryExecutionId.$": "$.QueryExecutionId"
               },
-              "ResultPath": "$.AthenaQuery5Result",
+              "ResultPath": "$.AthenaQuery4Result",
               "Next": "Check Athena Query 4 Status"
             },
             "Check Athena Query 4 Status": {
               "Type": "Task",
               "Resource": "arn:aws:states:::athena:getQueryExecution",
               "Parameters": {
-                "QueryExecutionId.$": "$.AthenaQuery5Result.QueryExecutionId"
+                "QueryExecutionId.$": "$.AthenaQuery4Result.QueryExecutionId"
               },
-              "ResultPath": "$.AthenaQuery5Status",
+              "ResultPath": "$.AthenaQuery4Status",
               "Next": "Is Athena Query 4 Complete?"
             },
             "Is Athena Query 4 Complete?": {
               "Type": "Choice",
               "Choices": [
                 {
-                  "Variable": "$.AthenaQuery5Status.QueryExecution.Status.State",
+                  "Variable": "$.AthenaQuery4Status.QueryExecution.Status.State",
                   "StringEquals": "SUCCEEDED",
                   "Next": "Athena Query 4 Complete"
                 },
                 {
-                  "Variable": "$.AthenaQuery5Status.QueryExecution.Status.State",
+                  "Variable": "$.AthenaQuery4Status.QueryExecution.Status.State",
                   "StringEquals": "FAILED",
                   "Next": "Athena Query 4 Failed"
                 }
@@ -529,28 +567,28 @@
               "ResultSelector": {
                 "QueryExecutionId.$": "$.QueryExecutionId"
               },
-              "ResultPath": "$.AthenaQuery6Result",
+              "ResultPath": "$.AthenaQuery5Result",
               "Next": "Check Athena Query 5 Status"
             },
             "Check Athena Query 5 Status": {
               "Type": "Task",
               "Resource": "arn:aws:states:::athena:getQueryExecution",
               "Parameters": {
-                "QueryExecutionId.$": "$.AthenaQuery6Result.QueryExecutionId"
+                "QueryExecutionId.$": "$.AthenaQuery5Result.QueryExecutionId"
               },
-              "ResultPath": "$.AthenaQuery6Status",
+              "ResultPath": "$.AthenaQuery5Status",
               "Next": "Is Athena Query 5 Complete?"
             },
             "Is Athena Query 5 Complete?": {
               "Type": "Choice",
               "Choices": [
                 {
-                  "Variable": "$.AthenaQuery6Status.QueryExecution.Status.State",
+                  "Variable": "$.AthenaQuery5Status.QueryExecution.Status.State",
                   "StringEquals": "SUCCEEDED",
                   "Next": "Athena Query 5 Complete"
                 },
                 {
-                  "Variable": "$.AthenaQuery6Status.QueryExecution.Status.State",
+                  "Variable": "$.AthenaQuery5Status.QueryExecution.Status.State",
                   "StringEquals": "FAILED",
                   "Next": "Athena Query 5 Failed"
                 }
@@ -592,28 +630,28 @@
               "ResultSelector": {
                 "QueryExecutionId.$": "$.QueryExecutionId"
               },
-              "ResultPath": "$.AthenaQuery7Result",
+              "ResultPath": "$.AthenaQuery6Result",
               "Next": "Check Athena Query 6 Status"
             },
             "Check Athena Query 6 Status": {
               "Type": "Task",
               "Resource": "arn:aws:states:::athena:getQueryExecution",
               "Parameters": {
-                "QueryExecutionId.$": "$.AthenaQuery7Result.QueryExecutionId"
+                "QueryExecutionId.$": "$.AthenaQuery6Result.QueryExecutionId"
               },
-              "ResultPath": "$.AthenaQuery7Status",
+              "ResultPath": "$.AthenaQuery6Status",
               "Next": "Is Athena Query 6 Complete?"
             },
             "Is Athena Query 6 Complete?": {
               "Type": "Choice",
               "Choices": [
                 {
-                  "Variable": "$.AthenaQuery7Status.QueryExecution.Status.State",
+                  "Variable": "$.AthenaQuery6Status.QueryExecution.Status.State",
                   "StringEquals": "SUCCEEDED",
                   "Next": "Athena Query 6 Complete"
                 },
                 {
-                  "Variable": "$.AthenaQuery7Status.QueryExecution.Status.State",
+                  "Variable": "$.AthenaQuery6Status.QueryExecution.Status.State",
                   "StringEquals": "FAILED",
                   "Next": "Athena Query 6 Failed"
                 }
@@ -655,28 +693,28 @@
               "ResultSelector": {
                 "QueryExecutionId.$": "$.QueryExecutionId"
               },
-              "ResultPath": "$.AthenaQuery8Result",
+              "ResultPath": "$.AthenaQuery7Result",
               "Next": "Check Athena Query 7 Status"
             },
             "Check Athena Query 7 Status": {
               "Type": "Task",
               "Resource": "arn:aws:states:::athena:getQueryExecution",
               "Parameters": {
-                "QueryExecutionId.$": "$.AthenaQuery8Result.QueryExecutionId"
+                "QueryExecutionId.$": "$.AthenaQuery7Result.QueryExecutionId"
               },
-              "ResultPath": "$.AthenaQuery8Status",
+              "ResultPath": "$.AthenaQuery7Status",
               "Next": "Is Athena Query 7 Complete?"
             },
             "Is Athena Query 7 Complete?": {
               "Type": "Choice",
               "Choices": [
                 {
-                  "Variable": "$.AthenaQuery8Status.QueryExecution.Status.State",
+                  "Variable": "$.AthenaQuery7Status.QueryExecution.Status.State",
                   "StringEquals": "SUCCEEDED",
                   "Next": "Athena Query 7 Complete"
                 },
                 {
-                  "Variable": "$.AthenaQuery8Status.QueryExecution.Status.State",
+                  "Variable": "$.AthenaQuery7Status.QueryExecution.Status.State",
                   "StringEquals": "FAILED",
                   "Next": "Athena Query 7 Failed"
                 }
@@ -718,28 +756,28 @@
               "ResultSelector": {
                 "QueryExecutionId.$": "$.QueryExecutionId"
               },
-              "ResultPath": "$.AthenaQuery9Result",
+              "ResultPath": "$.AthenaQuery8Result",
               "Next": "Check Athena Query 8 Status"
             },
             "Check Athena Query 8 Status": {
               "Type": "Task",
               "Resource": "arn:aws:states:::athena:getQueryExecution",
               "Parameters": {
-                "QueryExecutionId.$": "$.AthenaQuery9Result.QueryExecutionId"
+                "QueryExecutionId.$": "$.AthenaQuery8Result.QueryExecutionId"
               },
-              "ResultPath": "$.AthenaQuery9Status",
+              "ResultPath": "$.AthenaQuery8Status",
               "Next": "Is Athena Query 8 Complete?"
             },
             "Is Athena Query 8 Complete?": {
               "Type": "Choice",
               "Choices": [
                 {
-                  "Variable": "$.AthenaQuery9Status.QueryExecution.Status.State",
+                  "Variable": "$.AthenaQuery8Status.QueryExecution.Status.State",
                   "StringEquals": "SUCCEEDED",
                   "Next": "Athena Query 8 Complete"
                 },
                 {
-                  "Variable": "$.AthenaQuery9Status.QueryExecution.Status.State",
+                  "Variable": "$.AthenaQuery8Status.QueryExecution.Status.State",
                   "StringEquals": "FAILED",
                   "Next": "Athena Query 8 Failed"
                 }

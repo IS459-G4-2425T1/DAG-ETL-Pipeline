@@ -244,10 +244,43 @@
         {
           "Variable": "$.ThirdS3List.KeyCount",
           "NumericGreaterThan": 0,
-          "Next": "Run Athena Queries in Parallel"
+          "Next": "Start Pipeline2 DF Crawler"
         }
       ],
       "Default": "Wait Before Checking Third S3 Objects Again"
+    },
+    "Start Pipeline2 DF Crawler": {
+      "Type": "Task",
+      "Parameters": {
+        "Name": "pipeline2-df-schema"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:glue:startCrawler",
+      "Next": "Get Pipeline2 DF Crawler Status"
+    },
+    "Get Pipeline2 DF Crawler Status": {
+      "Type": "Task",
+      "Parameters": {
+        "Name": "pipeline2-df-schema"
+      },
+      "ResultPath": "$.CrawlerStatus",
+      "Resource": "arn:aws:states:::aws-sdk:glue:getCrawler",
+      "Next": "Choice"
+    },
+    "Choice": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.CrawlerStatus.Crawler.State",
+          "StringEquals": "READY",
+          "Next": "Run Athena Queries in Parallel"
+        }
+      ],
+      "Default": "Wait"
+    },
+    "Wait": {
+      "Type": "Wait",
+      "Seconds": 30,
+      "Next": "Get Pipeline2 DF Crawler Status"
     },
     "Wait Before Checking Third S3 Objects Again": {
       "Type": "Wait",
@@ -327,7 +360,7 @@
               "Type": "Task",
               "Resource": "arn:aws:states:::athena:startQueryExecution",
               "Parameters": {
-                "QueryString": "CREATE OR REPLACE VIEW origin_dest_delay AS\nSELECT year, month, origin, dest, route,\nROUND(AVG(ArrDelay), 2) AS arrdelay, ROUND(AVG(depdelay), 2) AS depdelay, ROUND(AVG(totaldelay), 2) AS totaldelay\nFROM df\nGROUP BY year, month, origin, dest, route\nORDER BY year, month, origin;",
+                "QueryString": "CREATE OR REPLACE VIEW delay_by_day AS\nSELECT UniqueCarrier, \nCASE WHEN DayOfWeek = 1 THEN 'Monday' \nWHEN DayOfWeek = 2 THEN 'Tuesday'\nWHEN DayOfWeek = 3 THEN 'Wednesday'\nWHEN DayOfWeek = 4 THEN 'Thursday'\nWHEN DayOfWeek = 5 THEN 'Friday'\nWHEN DayOfWeek = 6 THEN 'Saturday'\nWHEN DayOfWeek = 7 THEN 'Sunday'\nEND AS dayofweek, \nROUND(AVG(arrdelay), 2) AS arrdelay,\nROUND(AVG(depdelay), 2) AS depdelay,\nROUND(AVG(TotalDelay), 2) AS totaldelay\nFROM df\nGROUP BY UniqueCarrier, DayOfWeek\nORDER BY UniqueCarrier, DayOfWeek;",
                 "WorkGroup": "pipeline-2",
                 "QueryExecutionContext": {
                   "Catalog": "AwsDataCatalog",
@@ -390,7 +423,7 @@
               "Type": "Task",
               "Resource": "arn:aws:states:::athena:startQueryExecution",
               "Parameters": {
-                "QueryString": "CREATE OR REPLACE VIEW avg_delay_length_by_season AS\nSELECT \n    season,\n    AVG(totaldelay) AS Avg_Total_Delay,\n    AVG(carrierdelay) AS Avg_Carrier_Delay,\n    AVG(weatherdelay) AS Avg_Weather_Delay,\n    AVG(nasdelay) AS Avg_NAS_Delay,\n    AVG(securitydelay) AS Avg_Security_Delay,\n    AVG(lateaircraftdelay) AS Avg_Late_Aircraft_Delay\nFROM \n    df\nGROUP BY \n    season\nORDER BY \n    season;",
+                "QueryString": "CREATE OR REPLACE VIEW origin_dest_delay AS\nSELECT year, month, origin, dest, route,\nROUND(AVG(ArrDelay), 2) AS arrdelay, ROUND(AVG(depdelay), 2) AS depdelay, ROUND(AVG(totaldelay), 2) AS totaldelay\nFROM df\nGROUP BY year, month, origin, dest, route\nORDER BY year, month, origin;",
                 "WorkGroup": "pipeline-2",
                 "QueryExecutionContext": {
                   "Catalog": "AwsDataCatalog",
@@ -453,7 +486,7 @@
               "Type": "Task",
               "Resource": "arn:aws:states:::athena:startQueryExecution",
               "Parameters": {
-                "QueryString": "CREATE OR REPLACE VIEW daily_total_delays AS\nSELECT \n    dayofmonth,\n    SUM(CASE WHEN carrierdelay > 0 THEN 1 ELSE 0 END) AS Carrier_Delay,\n    SUM(CASE WHEN weatherdelay > 0 THEN 1 ELSE 0 END) AS Weather_Delay,\n    SUM(CASE WHEN nasdelay > 0 THEN 1 ELSE 0 END) AS NAS_Delay,\n    SUM(CASE WHEN securitydelay > 0 THEN 1 ELSE 0 END) AS Security_Delay,\n    SUM(CASE WHEN lateaircraftdelay > 0 THEN 1 ELSE 0 END) AS Late_Aircraft_Delay,\n    SUM(CASE WHEN carrierdelay > 0 THEN 1 ELSE 0 END) + \n    SUM(CASE WHEN weatherdelay > 0 THEN 1 ELSE 0 END) + \n    SUM(CASE WHEN nasdelay > 0 THEN 1 ELSE 0 END) + \n    SUM(CASE WHEN securitydelay > 0 THEN 1 ELSE 0 END) + \n    SUM(CASE WHEN lateaircraftdelay > 0 THEN 1 ELSE 0 END) AS Total_No_Delays\nFROM \n    df\nGROUP BY \n    dayofmonth\nORDER BY \n    dayofmonth;",
+                "QueryString": "CREATE OR REPLACE VIEW flight_type_delays AS\nSELECT\nCASE WHEN longhaulflight = 0 THEN 'Short'\nWHEN longhaulflight = 1 THEN 'Long'\nEND AS flightduration, \nUniqueCarrier, ScheduledArrHour, scheduleddephour,\nROUND(AVG(ArrDelay), 2) AS arrdelay,\nROUND(AVG(depdelay), 2) AS depdelay,\nROUND(AVG(totaldelay), 2) AS totaldelay\nFROM df\nGROUP BY UniqueCarrier, ScheduledArrHour, scheduleddephour, longhaulflight;",
                 "WorkGroup": "pipeline-2",
                 "QueryExecutionContext": {
                   "Catalog": "AwsDataCatalog",
