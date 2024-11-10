@@ -1,4 +1,4 @@
-# Project Overview
+# Data Scraper Overview
 
 This repository contains files for two EC2 scraper instances:
 - **historical data scraper** (for a one-time scrape of past data)
