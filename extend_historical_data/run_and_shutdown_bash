@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Change to your project directory
+cd /home/ubuntu/scraper
+
+# Activate the virtual environment
+source venv/bin/activate
+
+# Get a timestamp for the log file
+timestamp=$(date +"%Y%m%d_%H%M%S")
+log_file="/home/ubuntu/scraper/script_output_$timestamp.log"
+
+# Run the Python script and save output to a timestamped log file
+python main.py > "$log_file" 2>&1
+
+# Shut down the instance regardless of script success or failure
+sudo shutdown -h now
