@@ -4,7 +4,10 @@ import boto3
 import logging
 import shutil
 from dotenv import load_dotenv
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
+load_dotenv()
 # Directory containing CSV files
 # departure_folder = '/Users/renkee/Desktop/SMU/Y4S1/IS459/Project/DAG-ETL-Pipeline/extend_historical_data/departure_data'
 # arrival_folder = '/Users/renkee/Desktop/SMU/Y4S1/IS459/Project/DAG-ETL-Pipeline/extend_historical_data/arrival_data'
@@ -22,13 +25,13 @@ AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 
 # Function to read and standardize column names
 def read_and_standardize_csv(file_path):
-    df = pd.read_csv(file_path, skiprows=7)
+    df = pd.read_csv(file_path, skiprows=7, skipfooter=1, engine='python')
     df.columns = [col.strip().lower() for col in df.columns]  # Convert column names to lowercase
     return df
 
 #upload function
 def upload_to_s3(filepath, bucket_name, filename):
-
+    print("Starting to upload file to S3...")
     s3 = boto3.client(
         's3',
         aws_access_key_id=AWS_ACCESS_KEY_ID,
@@ -37,6 +40,7 @@ def upload_to_s3(filepath, bucket_name, filename):
 
     try:
         s3.upload_file(filepath, bucket_name, filename)
+        print("Successfully uploaded file to S3")
     except Exception as e:
         logger.error(f"Failed to upload {filename} to S3: {str(e)}")
 
@@ -59,11 +63,13 @@ def main():
         [read_and_standardize_csv(os.path.join(departure_folder, f)) for f in os.listdir(departure_folder) if f.endswith('.csv')],
         ignore_index=True
     )
+    print("done reading all departure data")
 
     arrival_df = pd.concat(
         [read_and_standardize_csv(os.path.join(arrival_folder, f)) for f in os.listdir(arrival_folder) if f.endswith('.csv')],
         ignore_index=True
     )
+    print("done reading all arrival data")
 
     # Remove rows where 'carrier code' is NaN
     departure_df = departure_df[departure_df['carrier code'].notna()]
@@ -96,6 +102,8 @@ def main():
         on=['carrier code', 'date (mm/dd/yyyy)', 'flight number', 'tail number'],
         how='inner'
     )
+
+    
     print("Columns before renaming:", final_df.columns)
     # Mapping the current columns to the new column names
     column_mapping = {
@@ -156,6 +164,14 @@ def main():
 
     final_df = final_df[final_columns]
 
+
+    time_columns = ['ArrTime', 'CRSArrTime', 'CRSDepTime', 'DepTime']
+    
+    for col in time_columns:
+        if col in final_df.columns:
+            # Remove colons and convert to integer
+            final_df[col] = final_df[col].astype(str).str.replace(':', '').replace('nan', '')  # Remove ':' and handle NaNs
+
     # Print the final DataFrame to verify
     print(final_df.head())
 
@@ -169,14 +185,21 @@ def main():
     print("Duplicates in arrival DataFrame:", arrival_df.duplicated().sum())
 
     # Specify the file path and name for the CSV file
-    #output_path = '/Users/renkee/Desktop/SMU/Y4S1/IS459/Project/DAG-ETL-Pipeline/extend_historical_data/combined_data.csv'
-    output_path = '/tmp/combined_data.csv'
+    # output_path = '/Users/renkee/Desktop/SMU/Y4S1/IS459/Project/DAG-ETL-Pipeline/extend_historical_data/combined_data.csv'
+    # Define the output path with the desired filename format
+    # Get current date minus 3 months
+    three_months_ago = datetime.now() - relativedelta(months=3)
+    current_month_year = three_months_ago.strftime("%m-%Y")
+    
+    output_path = f'/home/ubuntu/scraper/{current_month_year}-data.csv'
 
     # Write the DataFrame to a CSV file
     final_df.to_csv(output_path, index=False)
     
-    upload_to_s3(output_path, "airline-additional-data", "historical_2024_data.csv")
-    # delete_local_path(departure_folder)
-    # delete_local_path(arrival_folder)
-    # delete_local_path(output_path)
+    # Upload to S3 with the new filename
+    upload_to_s3(output_path, "airline-additional-data", f"{current_month_year}-data.csv")
+    
+    delete_local_path(departure_folder)
+    delete_local_path(arrival_folder)
+    delete_local_path(output_path)
 
