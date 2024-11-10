@@ -166,3 +166,4 @@ cython_debug/
 .terraform*
 terraform.tfvars
 terraform.tfstate
+model.tar.gz

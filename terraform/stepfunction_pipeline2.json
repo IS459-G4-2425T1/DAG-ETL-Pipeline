@@ -1,0 +1,519 @@
+{
+  "Comment": "Optimized State Machine using listObjectsV2 and minimal Parallel Athena queries",
+  "StartAt": "Start Reading Data Job",
+  "States": {
+    "Start Reading Data Job": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:glue:startJobRun",
+      "Parameters": {
+        "JobName": "reading data"
+      },
+      "ResultPath": "$.ReadingDataJob",
+      "Next": "Check Reading Data Job Status"
+    },
+    "Check Reading Data Job Status": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:glue:getJobRun",
+      "Parameters": {
+        "JobName": "reading data",
+        "RunId.$": "$.ReadingDataJob.JobRunId"
+      },
+      "ResultPath": "$.ReadingDataJobStatus",
+      "Next": "Is Reading Data Job Complete?"
+    },
+    "Is Reading Data Job Complete?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.ReadingDataJobStatus.JobRun.JobRunState",
+          "StringEquals": "SUCCEEDED",
+          "Next": "Check S3 Objects Uploaded"
+        },
+        {
+          "Variable": "$.ReadingDataJobStatus.JobRun.JobRunState",
+          "StringEquals": "FAILED",
+          "Next": "Reading Data Job Failed"
+        }
+      ],
+      "Default": "Wait Before Checking Reading Data Job Status Again"
+    },
+    "Wait Before Checking Reading Data Job Status Again": {
+      "Type": "Wait",
+      "Seconds": 180,
+      "Next": "Check Reading Data Job Status"
+    },
+    "Reading Data Job Failed": {
+      "Type": "Fail",
+      "Error": "ReadingDataJobFailed",
+      "Cause": "Reading Data Job failed."
+    },
+    "Check S3 Objects Uploaded": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:s3:listObjectsV2",
+      "Parameters": {
+        "Bucket": "airtime-historical-data",
+        "Prefix": "write/airline.csv.shuffle/"
+      },
+      "ResultPath": "$.S3List",
+      "Next": "Are S3 Objects Available?"
+    },
+    "Are S3 Objects Available?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.S3List.KeyCount",
+          "NumericGreaterThan": 0,
+          "Next": "Start Airtime Historical Crawler Job"
+        }
+      ],
+      "Default": "Wait Before Checking S3 Objects Again"
+    },
+    "Wait Before Checking S3 Objects Again": {
+      "Type": "Wait",
+      "Seconds": 30,
+      "Next": "Check S3 Objects Uploaded"
+    },
+    "Start Airtime Historical Crawler Job": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:glue:startCrawler",
+      "Parameters": {
+        "Name": "airtime-historical-crawler"
+      },
+      "ResultPath": "$.CrawlerJob",
+      "Next": "Wait Before Checking Crawler Job Status"
+    },
+    "Wait Before Checking Crawler Job Status": {
+      "Type": "Wait",
+      "Seconds": 60,
+      "Next": "Check Crawler Job Status"
+    },
+    "Check Crawler Job Status": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:glue:getCrawler",
+      "Parameters": {
+        "Name": "airtime-historical-crawler"
+      },
+      "ResultPath": "$.CrawlerStatus",
+      "Next": "Is Crawler Job Complete?"
+    },
+    "Is Crawler Job Complete?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.CrawlerStatus.Crawler.State",
+          "StringEquals": "READY",
+          "Next": "Start Airline Historic ETL Job"
+        }
+      ],
+      "Default": "Wait Before Checking Crawler Job Status Again"
+    },
+    "Wait Before Checking Crawler Job Status Again": {
+      "Type": "Wait",
+      "Seconds": 60,
+      "Next": "Check Crawler Job Status"
+    },
+    "Start Airline Historic ETL Job": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:glue:startJobRun",
+      "Parameters": {
+        "JobName": "airline-historic-clean-pipeline2"
+      },
+      "ResultPath": "$.AirlineHistoricETLJob",
+      "Next": "Check Airline Historic ETL Job Status"
+    },
+    "Check Airline Historic ETL Job Status": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:glue:getJobRun",
+      "Parameters": {
+        "JobName": "airline-historic-clean-pipeline2",
+        "RunId.$": "$.AirlineHistoricETLJob.JobRunId"
+      },
+      "ResultPath": "$.AirlineHistoricETLJobStatus",
+      "Next": "Is Airline Historic ETL Job Complete?"
+    },
+    "Is Airline Historic ETL Job Complete?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.AirlineHistoricETLJobStatus.JobRun.JobRunState",
+          "StringEquals": "SUCCEEDED",
+          "Next": "Check Second S3 Objects Uploaded"
+        },
+        {
+          "Variable": "$.AirlineHistoricETLJobStatus.JobRun.JobRunState",
+          "StringEquals": "FAILED",
+          "Next": "Airline Historic ETL Job Failed"
+        }
+      ],
+      "Default": "Wait Before Checking Airline Historic ETL Job Status Again"
+    },
+    "Wait Before Checking Airline Historic ETL Job Status Again": {
+      "Type": "Wait",
+      "Seconds": 480,
+      "Next": "Check Airline Historic ETL Job Status"
+    },
+    "Airline Historic ETL Job Failed": {
+      "Type": "Fail",
+      "Error": "AirlineHistoricETLJobFailed",
+      "Cause": "Airline Historic ETL Job failed."
+    },
+    "Check Second S3 Objects Uploaded": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:s3:listObjectsV2",
+      "Parameters": {
+        "Bucket": "airtime-historical-data",
+        "Prefix": "clean/pipeline-2/run-"
+      },
+      "ResultPath": "$.SecondS3List",
+      "Next": "Are Second S3 Objects Available?"
+    },
+    "Are Second S3 Objects Available?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.SecondS3List.KeyCount",
+          "NumericGreaterThan": 0,
+          "Next": "Start Engineering Test Job"
+        }
+      ],
+      "Default": "Wait Before Checking Second S3 Objects Again"
+    },
+    "Wait Before Checking Second S3 Objects Again": {
+      "Type": "Wait",
+      "Seconds": 30,
+      "Next": "Check Second S3 Objects Uploaded"
+    },
+    "Start Engineering Test Job": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:glue:startJobRun",
+      "Parameters": {
+        "JobName": "Engineering test"
+      },
+      "ResultPath": "$.EngineeringTestJob",
+      "Next": "Check Engineering Test Job Status"
+    },
+    "Check Engineering Test Job Status": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:glue:getJobRun",
+      "Parameters": {
+        "JobName": "Engineering test",
+        "RunId.$": "$.EngineeringTestJob.JobRunId"
+      },
+      "ResultPath": "$.EngineeringTestJobStatus",
+      "Next": "Is Engineering Test Job Complete?"
+    },
+    "Is Engineering Test Job Complete?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.EngineeringTestJobStatus.JobRun.JobRunState",
+          "StringEquals": "SUCCEEDED",
+          "Next": "Check Third S3 Objects Uploaded"
+        },
+        {
+          "Variable": "$.EngineeringTestJobStatus.JobRun.JobRunState",
+          "StringEquals": "FAILED",
+          "Next": "Engineering Test Job Failed"
+        }
+      ],
+      "Default": "Wait Before Checking Engineering Test Job Status Again"
+    },
+    "Wait Before Checking Engineering Test Job Status Again": {
+      "Type": "Wait",
+      "Seconds": 300,
+      "Next": "Check Engineering Test Job Status"
+    },
+    "Engineering Test Job Failed": {
+      "Type": "Fail",
+      "Error": "EngineeringTestJobFailed",
+      "Cause": "Engineering Test Job failed."
+    },
+    "Check Third S3 Objects Uploaded": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::aws-sdk:s3:listObjectsV2",
+      "Parameters": {
+        "Bucket": "pipeline2-data-storage",
+        "Prefix": "historic-processed/"
+      },
+      "ResultPath": "$.ThirdS3List",
+      "Next": "Are Third S3 Objects Available?"
+    },
+    "Are Third S3 Objects Available?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.ThirdS3List.KeyCount",
+          "NumericGreaterThan": 0,
+          "Next": "Run Athena Queries in Parallel"
+        }
+      ],
+      "Default": "Wait Before Checking Third S3 Objects Again"
+    },
+    "Wait Before Checking Third S3 Objects Again": {
+      "Type": "Wait",
+      "Seconds": 30,
+      "Next": "Check Third S3 Objects Uploaded"
+    },
+    "Run Athena Queries in Parallel": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Run Athena Query 1",
+          "States": {
+            "Run Athena Query 1": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::athena:startQueryExecution",
+              "Parameters": {
+                "QueryString": "CREATE OR REPLACE VIEW days_seasons_delays AS\nSELECT year, month, dayofmonth, dayofweek, ROUND(AVG(ArrDelay), 2) AS arrdelay, ROUND(AVG(depdelay), 2) AS depdelay, ROUND(AVG(totaldelay), 2) AS totaldelay,\nCASE WHEN (month = 1 or month = 2 or month = 12) THEN 'Winter'\nWHEN (month = 3 or month = 4 or month = 5) THEN 'Spring'\nWHEN (month = 6 or month = 7 or month = 8) THEN 'Summer'\nWHEN (month = 9 or month = 10 or month = 11) THEN 'Fall'\nEND AS season\nFROM df\nGROUP BY year, month, dayofmonth, dayofweek\nORDER BY year, month, dayofmonth, dayofweek;",
+                "WorkGroup": "pipeline-2",
+                "QueryExecutionContext": {
+                  "Catalog": "AwsDataCatalog",
+                  "Database": "pipeline2-database"
+                },
+                "ResultConfiguration": {
+                  "OutputLocation": "s3://airtime-historical-data/pipeline-2-athena/"
+                }
+              },
+              "ResultSelector": {
+                "QueryExecutionId.$": "$.QueryExecutionId"
+              },
+              "ResultPath": "$.AthenaQuery1Result",
+              "Next": "Check Athena Query 1 Status"
+            },
+            "Check Athena Query 1 Status": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::athena:getQueryExecution",
+              "Parameters": {
+                "QueryExecutionId.$": "$.AthenaQuery1Result.QueryExecutionId"
+              },
+              "ResultPath": "$.AthenaQuery1Status",
+              "Next": "Is Athena Query 1 Complete?"
+            },
+            "Is Athena Query 1 Complete?": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.AthenaQuery1Status.QueryExecution.Status.State",
+                  "StringEquals": "SUCCEEDED",
+                  "Next": "Athena Query 1 Complete"
+                },
+                {
+                  "Variable": "$.AthenaQuery1Status.QueryExecution.Status.State",
+                  "StringEquals": "FAILED",
+                  "Next": "Athena Query 1 Failed"
+                }
+              ],
+              "Default": "Wait Before Checking Athena Query 1 Status Again"
+            },
+            "Wait Before Checking Athena Query 1 Status Again": {
+              "Type": "Wait",
+              "Seconds": 10,
+              "Next": "Check Athena Query 1 Status"
+            },
+            "Athena Query 1 Failed": {
+              "Type": "Fail",
+              "Error": "AthenaQuery1Failed",
+              "Cause": "Athena Query 1 execution failed."
+            },
+            "Athena Query 1 Complete": {
+              "Type": "Succeed"
+            }
+          }
+        },
+        {
+          "StartAt": "Run Athena Query 2",
+          "States": {
+            "Run Athena Query 2": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::athena:startQueryExecution",
+              "Parameters": {
+                "QueryString": "CREATE OR REPLACE VIEW origin_dest_delay AS\nSELECT year, month, origin, dest, route,\nROUND(AVG(ArrDelay), 2) AS arrdelay, ROUND(AVG(depdelay), 2) AS depdelay, ROUND(AVG(totaldelay), 2) AS totaldelay\nFROM df\nGROUP BY year, month, origin, dest, route\nORDER BY year, month, origin;",
+                "WorkGroup": "pipeline-2",
+                "QueryExecutionContext": {
+                  "Catalog": "AwsDataCatalog",
+                  "Database": "pipeline2-database"
+                },
+                "ResultConfiguration": {
+                  "OutputLocation": "s3://airtime-historical-data/pipeline-2-athena/"
+                }
+              },
+              "ResultSelector": {
+                "QueryExecutionId.$": "$.QueryExecutionId"
+              },
+              "ResultPath": "$.AthenaQuery2Result",
+              "Next": "Check Athena Query 2 Status"
+            },
+            "Check Athena Query 2 Status": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::athena:getQueryExecution",
+              "Parameters": {
+                "QueryExecutionId.$": "$.AthenaQuery2Result.QueryExecutionId"
+              },
+              "ResultPath": "$.AthenaQuery2Status",
+              "Next": "Is Athena Query 2 Complete?"
+            },
+            "Is Athena Query 2 Complete?": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.AthenaQuery2Status.QueryExecution.Status.State",
+                  "StringEquals": "SUCCEEDED",
+                  "Next": "Athena Query 2 Complete"
+                },
+                {
+                  "Variable": "$.AthenaQuery2Status.QueryExecution.Status.State",
+                  "StringEquals": "FAILED",
+                  "Next": "Athena Query 2 Failed"
+                }
+              ],
+              "Default": "Wait Before Checking Athena Query 2 Status Again"
+            },
+            "Wait Before Checking Athena Query 2 Status Again": {
+              "Type": "Wait",
+              "Seconds": 10,
+              "Next": "Check Athena Query 2 Status"
+            },
+            "Athena Query 2 Failed": {
+              "Type": "Fail",
+              "Error": "AthenaQuery2Failed",
+              "Cause": "Athena Query 2 execution failed."
+            },
+            "Athena Query 2 Complete": {
+              "Type": "Succeed"
+            }
+          }
+        },
+        {
+          "StartAt": "Run Athena Query 3",
+          "States": {
+            "Run Athena Query 3": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::athena:startQueryExecution",
+              "Parameters": {
+                "QueryString": "CREATE OR REPLACE VIEW avg_delay_length_by_season AS\nSELECT \n    season,\n    AVG(totaldelay) AS Avg_Total_Delay,\n    AVG(carrierdelay) AS Avg_Carrier_Delay,\n    AVG(weatherdelay) AS Avg_Weather_Delay,\n    AVG(nasdelay) AS Avg_NAS_Delay,\n    AVG(securitydelay) AS Avg_Security_Delay,\n    AVG(lateaircraftdelay) AS Avg_Late_Aircraft_Delay\nFROM \n    df\nGROUP BY \n    season\nORDER BY \n    season;",
+                "WorkGroup": "pipeline-2",
+                "QueryExecutionContext": {
+                  "Catalog": "AwsDataCatalog",
+                  "Database": "pipeline2-database"
+                },
+                "ResultConfiguration": {
+                  "OutputLocation": "s3://airtime-historical-data/pipeline-2-athena/"
+                }
+              },
+              "ResultSelector": {
+                "QueryExecutionId.$": "$.QueryExecutionId"
+              },
+              "ResultPath": "$.AthenaQuery3Result",
+              "Next": "Check Athena Query 3 Status"
+            },
+            "Check Athena Query 3 Status": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::athena:getQueryExecution",
+              "Parameters": {
+                "QueryExecutionId.$": "$.AthenaQuery3Result.QueryExecutionId"
+              },
+              "ResultPath": "$.AthenaQuery3Status",
+              "Next": "Is Athena Query 3 Complete?"
+            },
+            "Is Athena Query 3 Complete?": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.AthenaQuery3Status.QueryExecution.Status.State",
+                  "StringEquals": "SUCCEEDED",
+                  "Next": "Athena Query 3 Complete"
+                },
+                {
+                  "Variable": "$.AthenaQuery3Status.QueryExecution.Status.State",
+                  "StringEquals": "FAILED",
+                  "Next": "Athena Query 3 Failed"
+                }
+              ],
+              "Default": "Wait Before Checking Athena Query 3 Status Again"
+            },
+            "Wait Before Checking Athena Query 3 Status Again": {
+              "Type": "Wait",
+              "Seconds": 10,
+              "Next": "Check Athena Query 3 Status"
+            },
+            "Athena Query 3 Failed": {
+              "Type": "Fail",
+              "Error": "AthenaQuery3Failed",
+              "Cause": "Athena Query 3 execution failed."
+            },
+            "Athena Query 3 Complete": {
+              "Type": "Succeed"
+            }
+          }
+        },
+        {
+          "StartAt": "Run Athena Query 4",
+          "States": {
+            "Run Athena Query 4": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::athena:startQueryExecution",
+              "Parameters": {
+                "QueryString": "CREATE OR REPLACE VIEW daily_total_delays AS\nSELECT \n    dayofmonth,\n    SUM(CASE WHEN carrierdelay > 0 THEN 1 ELSE 0 END) AS Carrier_Delay,\n    SUM(CASE WHEN weatherdelay > 0 THEN 1 ELSE 0 END) AS Weather_Delay,\n    SUM(CASE WHEN nasdelay > 0 THEN 1 ELSE 0 END) AS NAS_Delay,\n    SUM(CASE WHEN securitydelay > 0 THEN 1 ELSE 0 END) AS Security_Delay,\n    SUM(CASE WHEN lateaircraftdelay > 0 THEN 1 ELSE 0 END) AS Late_Aircraft_Delay,\n    SUM(CASE WHEN carrierdelay > 0 THEN 1 ELSE 0 END) + \n    SUM(CASE WHEN weatherdelay > 0 THEN 1 ELSE 0 END) + \n    SUM(CASE WHEN nasdelay > 0 THEN 1 ELSE 0 END) + \n    SUM(CASE WHEN securitydelay > 0 THEN 1 ELSE 0 END) + \n    SUM(CASE WHEN lateaircraftdelay > 0 THEN 1 ELSE 0 END) AS Total_No_Delays\nFROM \n    df\nGROUP BY \n    dayofmonth\nORDER BY \n    dayofmonth;",
+                "WorkGroup": "pipeline-2",
+                "QueryExecutionContext": {
+                  "Catalog": "AwsDataCatalog",
+                  "Database": "pipeline2-database"
+                },
+                "ResultConfiguration": {
+                  "OutputLocation": "s3://airtime-historical-data/pipeline-2-athena/"
+                }
+              },
+              "ResultSelector": {
+                "QueryExecutionId.$": "$.QueryExecutionId"
+              },
+              "ResultPath": "$.AthenaQuery4Result",
+              "Next": "Check Athena Query 4 Status"
+            },
+            "Check Athena Query 4 Status": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::athena:getQueryExecution",
+              "Parameters": {
+                "QueryExecutionId.$": "$.AthenaQuery4Result.QueryExecutionId"
+              },
+              "ResultPath": "$.AthenaQuery4Status",
+              "Next": "Is Athena Query 4 Complete?"
+            },
+            "Is Athena Query 4 Complete?": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.AthenaQuery4Status.QueryExecution.Status.State",
+                  "StringEquals": "SUCCEEDED",
+                  "Next": "Athena Query 4 Complete"
+                },
+                {
+                  "Variable": "$.AthenaQuery4Status.QueryExecution.Status.State",
+                  "StringEquals": "FAILED",
+                  "Next": "Athena Query 4 Failed"
+                }
+              ],
+              "Default": "Wait Before Checking Athena Query 4 Status Again"
+            },
+            "Wait Before Checking Athena Query 4 Status Again": {
+              "Type": "Wait",
+              "Seconds": 10,
+              "Next": "Check Athena Query 4 Status"
+            },
+            "Athena Query 4 Failed": {
+              "Type": "Fail",
+              "Error": "AthenaQuery4Failed",
+              "Cause": "Athena Query 4 execution failed."
+            },
+            "Athena Query 4 Complete": {
+              "Type": "Succeed"
+            }
+          }
+        }
+      ],
+      "Next": "Flow Complete"
+    },
+    "Flow Complete": {
+      "Type": "Succeed"
+    }
+  }
+}
