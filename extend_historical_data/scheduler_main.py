@@ -9,11 +9,18 @@ import os
 import time
 import logging
 import glob
-from datetime import datetime
 import process_data
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+# Get the current date
+current_date = datetime.now()
+
+# Extract the current year and month
+YEAR = current_date.year
+MONTH = current_date.month - 1 - 3  # Subtract 3 to get the latest month and subtract 1 for index starting from 0 
 
 # Initialize WebDriver with proper options
 def init_driver(download_dir):
@@ -22,12 +29,6 @@ def init_driver(download_dir):
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage') 
     chrome_options.add_argument('--window-size=1920x1080')  
-    chrome_options.add_argument('--single-process')
-    chrome_options.add_argument('--disable-dev-tools')
-    chrome_options.add_argument('--no-zygote')
-    chrome_options.add_argument('--disable-gpu')
-
-    chrome_options.binary_location = os.environ.get('CHROME_BINARY_PATH', '/opt/chrome-linux/chrome')
 
     # Set download preferences
     prefs = {
@@ -37,8 +38,7 @@ def init_driver(download_dir):
     }
     chrome_options.add_experimental_option("prefs", prefs)
 
-    service = Service(os.environ.get('CHROMEDRIVER_PATH', '/opt/chromedriver'))
-    # service = Service(ChromeDriverManager().install())
+    service = Service(ChromeDriverManager().install())
     
     return webdriver.Chrome(
         service=service,
@@ -57,7 +57,6 @@ def wait_for_page_to_load(driver, by, value):
 def select_dropdown(driver, dropdown_id, display_text):
     dropdown = Select(driver.find_element(By.ID, dropdown_id))
     dropdown.select_by_visible_text(display_text)  # Select by the display text
-
 
 # Function to select checkboxes
 def select_checkbox(driver, checkbox_id):
@@ -97,7 +96,6 @@ def scrape_departure():
     print("STARTING TO SCRAPE DEPARTURE DATA...")
     
     # Initialize the download directory path
-    # download_dir = os.path.expanduser('~/Desktop/SMU/Y4S1/IS459/Project/DAG-ETL-Pipeline/extend_historical_data/departure_data')
     download_dir = '/home/ubuntu/scraper/departure_data'
     if not os.path.exists(download_dir):
         os.makedirs(download_dir)
@@ -113,48 +111,25 @@ def scrape_departure():
         airport_dropdown = driver.find_element(By.ID, 'cboAirport')
         select_airport = Select(airport_dropdown)
         airports = [option.text for option in select_airport.options]  # Get the display text
+
+        # Get all display words for options in the airline dropdown
+        airline_dropdown = driver.find_element(By.ID, 'cboAirline')
+        select_airline = Select(airline_dropdown)
+        airlines = [option.text for option in select_airline.options]  # Get the display text
+
          # half the airport list
         airports = airports[::4]
 
-        # # Get all display words for options in the airline dropdown
-        # airline_dropdown = driver.find_element(By.ID, 'cboAirline')
-        # select_airline = Select(airline_dropdown)
-        # airlines = [option.text for option in select_airline.options]  # Get the display text
-        airlines = [
-            'Alaska Airlines Inc. (AS)',
-            'Allegiant Air (G4)',
-            'American Airlines Inc. (AA)',
-            'American Eagle Airlines Inc. (MQ)',
-            'Comair Inc. (OH)',
-            'Delta Airlines Inc. (DL)',
-            'Endeavor Air Inc. (9E)',
-            'Envoy Air (MQ)',
-            'Frontier Airlines Inc. (F9)',
-            'Hawaiian Airlines Inc. (HA)',
-            'Horizon Air (QX)',
-            'JetBlue Airways (B6)',
-            'Mesa Airlines Inc. (YV)',
-            'PSA Airlines Inc. (OH)',
-            'Pinnacle Airlines Inc. (9E)',
-            'Republic Airline (YX)',
-            'SkyWest Airlines Inc. (OO)',
-            'Southwest Airlines Co. (WN)',
-            'Spirit Airlines (NK)',
-            'United Airlines Inc. (UA)'
-        ]
-
-
         # Print to check the display words
         print()
-        print("Count Airports:", len(airports))
-        print("Count Airlines:", len(airlines))
+        print("No of Airports:", len(airports))
+        print("No of Airlines:", len(airlines))
 
         # Select checkboxes for year, month, and day and statistics
-        # all these are all boxes that needs to be checked once
         select_checkbox(driver, 'chkAllStatistics') 
-        select_checkbox_by_value(driver, '2024')
+        select_checkbox_by_value(driver, YEAR)
 
-        select_checkbox(driver, 'chkAllMonths')
+        select_checkbox(driver, 'chkMonths_{}'.format(MONTH))
         select_checkbox(driver, 'chkAllDays') 
 
 
@@ -180,16 +155,11 @@ def scrape_departure():
                     download_button.click()
 
                     # give it max 5mins to download
-                    if wait_for_download_to_complete(download_dir, timeout=60):
+                    if wait_for_download_to_complete(download_dir, timeout=120):
                         latest_file = get_latest_file(download_dir)
                         print("latest file name (old): ".format(latest_file))
                         if latest_file:
-
-                            # new_filename = os.path.join(download_dir, f'{origin}_{airline}.csv')
-                            # Set the new filename with the timestamp
-                            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                            new_filename = os.path.join(download_dir, f'{timestamp}.csv')
-
+                            new_filename = os.path.join(download_dir, f'{origin}_{airline}.csv')
                             os.rename(latest_file, new_filename)
                             print(f"Renamed {latest_file} to: {new_filename}")
                         else:
@@ -209,7 +179,6 @@ def scrape_arrival():
     print("STARTING TO SCRAPE ARRIVAL DATA...")
     
     # Initialize the download directory path
-    # download_dir = os.path.expanduser('~/Desktop/SMU/Y4S1/IS459/Project/DAG-ETL-Pipeline/extend_historical_data/arrival_data')
     download_dir = '/home/ubuntu/scraper/arrival_data'
     if not os.path.exists(download_dir):
         os.makedirs(download_dir)
@@ -226,48 +195,25 @@ def scrape_arrival():
         select_airport = Select(airport_dropdown)
         airports = [option.text for option in select_airport.options]  # Get the display text
 
-        # half the airport list
+        # Get all display words for options in the airline dropdown
+        airline_dropdown = driver.find_element(By.ID, 'cboAirline')
+        select_airline = Select(airline_dropdown)
+        airlines = [option.text for option in select_airline.options]  # Get the display text
+
+         # half the airport list
         airports = airports[::4]
 
-        # # Get all display words for options in the airline dropdown
-        # airline_dropdown = driver.find_element(By.ID, 'cboAirline')
-        # select_airline = Select(airline_dropdown)
-        # airlines = [option.text for option in select_airline.options]  # Get the display text
-        airlines = [
-            'Alaska Airlines Inc. (AS)',
-            'Allegiant Air (G4)',
-            'American Airlines Inc. (AA)',
-            'American Eagle Airlines Inc. (MQ)',
-            'Comair Inc. (OH)',
-            'Delta Airlines Inc. (DL)',
-            'Endeavor Air Inc. (9E)',
-            'Envoy Air (MQ)',
-            'Frontier Airlines Inc. (F9)',
-            'Hawaiian Airlines Inc. (HA)',
-            'Horizon Air (QX)',
-            'JetBlue Airways (B6)',
-            'Mesa Airlines Inc. (YV)',
-            'PSA Airlines Inc. (OH)',
-            'Pinnacle Airlines Inc. (9E)',
-            'Republic Airline (YX)',
-            'SkyWest Airlines Inc. (OO)',
-            'Southwest Airlines Co. (WN)',
-            'Spirit Airlines (NK)',
-            'United Airlines Inc. (UA)'
-        ]
-
         # Print to check the display words
-        print("Count Airports:", len(airports))
-        print("Count Airlines:", len(airlines))
+        print("No of Airports:", len(airports))
+        print("No of Airlines:", len(airlines))
 
         # Select checkboxes for year, month, and day and statistics
         # all these are all boxes that needs to be checked once
         select_checkbox(driver, 'chkAllStatistics') 
         select_checkbox_by_value(driver, '2024')
 
-        select_checkbox(driver, 'chkAllMonths')
+        select_checkbox(driver, 'chkMonths_{}'.format(MONTH))
         select_checkbox(driver, 'chkAllDays') 
-
 
         # Loop through all combinations to download CSV files
         for origin in airports:
@@ -291,14 +237,11 @@ def scrape_arrival():
                     download_button.click()
 
                     # give it max 5mins to download
-                    if wait_for_download_to_complete(download_dir, timeout=60):
+                    if wait_for_download_to_complete(download_dir, timeout=120):
                         latest_file = get_latest_file(download_dir)
                         print("latest file name (old): ".format(latest_file))
                         if latest_file:
-                            # new_filename = os.path.join(download_dir, f'{origin}_{airline}.csv')
-                            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                            new_filename = os.path.join(download_dir, f'{timestamp}.csv')
-
+                            new_filename = os.path.join(download_dir, f'{origin}_{airline}.csv')
                             os.rename(latest_file, new_filename)
                             print(f"Renamed {latest_file} to: {new_filename}")
                         else:
@@ -313,7 +256,7 @@ def scrape_arrival():
 
     finally:
         driver.quit()
-
+    
 if __name__ == '__main__':
     
     scrape_departure()
