@@ -81,7 +81,7 @@ function App() {
       <AppBar position="static">
         <Toolbar>
           <Typography variant="h6" component="div">
-            Big Data Pipeline Dashboard Analytics
+            Big Data Pipeline Dashboard Analytics and Prediction
           </Typography>
         </Toolbar>
       </AppBar>
@@ -96,9 +96,9 @@ function App() {
           centered={!isMobile}
           sx={{ scrollBehavior: 'smooth' }}
         >
-          <Tab label="QuickSight Dashboard 1" />
-          <Tab label="QuickSight Dashboard 2" />
-          <Tab label="SageMaker Predictions" />
+          <Tab label="Pipeline 1 QuickSight Dashboard" />
+          <Tab label="Pipeline 2 QuickSight Dashboard" />
+          <Tab label="Airline Delay Predictions" />
         </Tabs>
 
         <Box sx={{ mt: 4 }}>
@@ -149,7 +149,7 @@ function App() {
       >
         <Container maxWidth="sm">
           <Typography variant="body1">
-            AWS QuickSight Dashboard and SageMaker Predictions Application.
+            AWS QuickSight Dashboard and SageMaker Predictions Application
           </Typography>
         </Container>
       </Box>
