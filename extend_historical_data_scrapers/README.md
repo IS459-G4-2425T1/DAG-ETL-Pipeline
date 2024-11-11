@@ -1,4 +1,7 @@
 # Data Scraper Overview
+This scraper aims to enhance the existing Kaggle Dataset by scraping departure and arrival data from 2024 onwards. We perform the scraping on the following sites:
+Departure data: https://www.transtats.bts.gov/ONTIME/Departures.aspx
+Arrival data: https://www.transtats.bts.gov/ONTIME/Arrivals.aspx
 
 This repository contains files for two EC2 scraper instances:
 - **historical data scraper** (for a one-time scrape of past data)
