@@ -30,6 +30,6 @@ For our deployment setup:
 3. **API Gateway**: An AWS API Gateway is configured to expose the Lambda function as a REST API, allowing external applications to send requests and receive arrival delay predictions in real-time.
 
 ## Requirements
-- **Amazon SageMaker**: The notebook is designed to be run on a SageMaker-managed notebook instance.
+- **Amazon SageMaker**: The notebook is designed to be run on a SageMaker-managed notebook instance. (For building of models using the `airlines-xgboostregressor-arrdelay.ipynb` file)
 - **AWS Lambda**: The Lambda function allows for real-time predictions based on live data.
 - **API Gateway**: Exposes the Lambda function as an API endpoint.
